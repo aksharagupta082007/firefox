@@ -1,0 +1,17 @@
+fastapi
+uvicorn[standard]
+sqlalchemy
+geoalchemy2
+psycopg2-binary
+aiohttp
+numpy
+scipy
+scikit-learn
+networkx
+osmnx
+redis
+websockets
+httpx
+pydantic
+google-genai
+shapely
