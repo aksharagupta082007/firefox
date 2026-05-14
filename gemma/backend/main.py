@@ -12,6 +12,19 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
+# Imports from requirements.txt
+import uvicorn
+import sqlalchemy
+import psycopg2
+import aiohttp
+import numpy as np
+import scipy
+import sklearn
+import networkx as nx
+import websockets
+import httpx
+import shapely
+
 # ── Pipeline imports ─────────────────────────────────────────────────
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from backend.pipeline.trigger_detection import generate_simulated_trigger, poll_usgs_feed
@@ -549,9 +562,8 @@ async def test_sensor_connection():
     """
     Probe all registered devices and return their status + latest readings.
     """
-    import aiohttp as _aiohttp
     results = []
-    async with _aiohttp.ClientSession() as session:
+    async with aiohttp.ClientSession() as session:
         for device in collector.get_devices():
             reading = await collector._poll_single(session, device["url"])
             if reading:
@@ -602,8 +614,7 @@ async def register_device(req: DeviceRegistration):
     """Register a new Phyphox phone by IP address."""
     device = collector.register_device(req.ip, name=req.name, port=req.port)
     # Immediately probe the device
-    import aiohttp as _aiohttp
-    async with _aiohttp.ClientSession() as session:
+    async with aiohttp.ClientSession() as session:
         reading = await collector._poll_single(session, device["url"])
         if reading:
             device["status"] = "connected"

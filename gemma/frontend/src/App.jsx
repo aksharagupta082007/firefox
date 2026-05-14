@@ -3,6 +3,8 @@ import "./index.css";
 import DemoSimulator from "./pages/DemoSimulator";
 import ResponderDashboard from "./pages/ResponderDashboard";
 import CitizenApp from "./pages/CitizenApp";
+import LoginPage from "./pages/LoginPage";
+import SignUpPage from "./pages/SignUpPage";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 import SeismicWave from "./components/SeismicWave";
@@ -10,7 +12,9 @@ import SeismicWave from "./components/SeismicWave";
 const NAV_ITEMS = [
   { id: "demo", label: "Demo Simulator" },
   { id: "responder", label: "Command Center" },
-  { id: "citizen", label: "Citizen Mode" }
+  { id: "citizen", label: "Citizen Mode" },
+  { id: "login", label: "Login" },
+  { id: "signup", label: "Sign Up" }
 ];
 
 export default function App() {
@@ -64,17 +68,13 @@ export default function App() {
         {/* Landing Hero Section */}
         <section className="hero-section">
           <div className="hero-content">
-            <div className="hero-layout">
-              <div className="hero-aurora-wrapper">
-                <h1 className="hero-aurora">AURORA</h1>
-              </div>
-              <div className="hero-text-content">
-                <h1 className="hero-tech">TECH</h1>
-                <p className="hero-desc">
-                  In the critical window after an earthquake, every second counts. AURORA TECH is an AI-powered global resilience system that transforms a network of ordinary smartphones into a sophisticated seismic grid. By orchestrating an 11-layer autonomous pipeline, we bridge the gap between detection and rescue—delivering tactical dispatch briefs and safe-route planning in under 30 seconds.
-                </p>
-              </div>
+            <div className="hero-title-group">
+              <h1 className="hero-aurora">AURORA</h1>
+              <h1 className="hero-tech">TECH</h1>
             </div>
+            <p className="hero-desc">
+              In the critical window after an earthquake, every second counts. AURORA TECH is an AI-powered global resilience system that transforms a network of ordinary smartphones into a sophisticated seismic grid. By orchestrating an 11-layer autonomous pipeline, we bridge the gap between detection and rescue—delivering tactical dispatch briefs and safe-route planning in under 30 seconds.
+            </p>
           </div>
           
           {/* Seismic Wave Component */}
@@ -103,6 +103,12 @@ export default function App() {
               ← Back to Dashboard
             </button>
             <CitizenApp />
+          </div>
+          <div style={{ display: page === "login" ? "block" : "none" }}>
+            <LoginPage setPage={setPage} />
+          </div>
+          <div style={{ display: page === "signup" ? "block" : "none" }}>
+            <SignUpPage setPage={setPage} />
           </div>
         </section>
         <Footer />
