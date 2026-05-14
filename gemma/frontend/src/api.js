@@ -1,25 +1,27 @@
 const API_BASE = import.meta.env.VITE_API_URL || `http://${window.location.hostname}:8000`;
 const WS_BASE = import.meta.env.VITE_WS_URL || `ws://${window.location.hostname}:8000`;
-
 export const api = {
-  async simulate(params: { magnitude: number; epicenter_lat: number; epicenter_lon: number; depth_km: number; use_real_sensor: boolean }) {
+  async simulate(params) {
     const res = await fetch(`${API_BASE}/api/simulate`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(params),
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(params)
     });
     return res.json();
   },
-  async submitSOS(data: { lat: number; lon: number; severity: number; message: string; people_count: number; needs_medical: boolean; is_trapped: boolean }) {
+  async submitSOS(data) {
     const res = await fetch(`${API_BASE}/api/sos`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data),
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data)
     });
     return res.json();
   },
-  async triageChat(message: string, history: Array<{ role: string; content: string }> = []) {
+  async triageChat(message, history = []) {
     const res = await fetch(`${API_BASE}/api/triage`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message, history }),
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ message, history })
     });
     return res.json();
   },
@@ -51,28 +53,32 @@ export const api = {
     const res = await fetch(`${API_BASE}/api/devices`);
     return res.json();
   },
-  async registerDevice(ip: string, name?: string, port = 8080) {
+  async registerDevice(ip, name, port = 8080) {
     const res = await fetch(`${API_BASE}/api/devices/register`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ip, name, port }),
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ip, name, port })
     });
     return res.json();
   },
-  async removeDevice(ip: string) {
-    const res = await fetch(`${API_BASE}/api/devices/${ip}`, { method: 'DELETE' });
+  async removeDevice(ip) {
+    const res = await fetch(`${API_BASE}/api/devices/${ip}`, { method: "DELETE" });
     return res.json();
-  },
+  }
 };
-
-export function createWebSocket(onMessage: (data: any) => void): WebSocket {
+export function createWebSocket(onMessage) {
   const ws = new WebSocket(`${WS_BASE}/ws`);
   ws.onmessage = (event) => {
-    try { onMessage(JSON.parse(event.data)); } catch (e) { console.error('WS parse error', e); }
+    try {
+      onMessage(JSON.parse(event.data));
+    } catch (e) {
+      console.error("WS parse error", e);
+    }
   };
-  ws.onopen = () => console.log('WebSocket connected');
+  ws.onopen = () => console.log("WebSocket connected");
   ws.onclose = () => {
-    console.log('WebSocket disconnected, reconnecting in 3s...');
-    setTimeout(() => createWebSocket(onMessage), 3000);
+    console.log("WebSocket disconnected, reconnecting in 3s...");
+    setTimeout(() => createWebSocket(onMessage), 3e3);
   };
   return ws;
 }
