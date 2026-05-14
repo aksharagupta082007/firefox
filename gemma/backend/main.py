@@ -67,10 +67,17 @@ class ConnectionManager:
 manager = ConnectionManager()
 collector = PhyphoxCollector(initial_devices=["192.168.31.146"])
 
+from backend.database import init_db
+
 # ── Lifespan ─────────────────────────────────────────────────────────
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info("🚀 AURORA TECH starting up...")
+    try:
+        init_db()
+        logger.info("✅ Database tables verified/created.")
+    except Exception as e:
+        logger.error(f"❌ Database initialization failed: {e}")
     yield
     collector.stop()
     logger.info("AURORA TECH shutting down.")

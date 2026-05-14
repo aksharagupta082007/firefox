@@ -16,7 +16,7 @@ import enum
 
 DATABASE_URL = os.getenv(
     "DATABASE_URL",
-    "postgresql://aurora:aurora@localhost:5432/aurora_db"
+    "postgresql://aurora:aurora@localhost:5433/aurora_db"
 )
 
 engine = create_engine(DATABASE_URL, echo=False, pool_pre_ping=True)
