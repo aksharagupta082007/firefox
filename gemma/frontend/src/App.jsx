@@ -5,24 +5,26 @@ import ResponderDashboard from "./pages/ResponderDashboard";
 import CitizenApp from "./pages/CitizenApp";
 import LoginPage from "./pages/LoginPage";
 import SignUpPage from "./pages/SignUpPage";
+import CommandCenter from "./pages/CommandCenter";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 import SeismicWave from "./components/SeismicWave";
 
-const NAV_ITEMS = [
-  { id: "demo", label: "Demo Simulator" },
-  { id: "responder", label: "Command Center" },
-  { id: "citizen", label: "Citizen Mode" },
-  { id: "login", label: "Login" },
-  { id: "signup", label: "Sign Up" }
-];
-
 export default function App() {
+  const [user, setUser] = useState(null);
   const [page, setPage] = useState("demo");
   const [isAlert, setIsAlert] = useState(false);
   const [latestResult, setLatestResult] = useState(null);
   const [heroSlidUp, setHeroSlidUp] = useState(false);
   const [mousePos, setMousePos] = useState({ x: 50, y: 50 });
+
+  // Persistence
+  useEffect(() => {
+    const savedUser = localStorage.getItem("aurora_user");
+    if (savedUser) {
+      setUser(JSON.parse(savedUser));
+    }
+  }, []);
 
   useEffect(() => {
     const handleMouseMove = (e) => {
@@ -30,42 +32,66 @@ export default function App() {
       const y = (e.clientY / window.innerHeight) * 100;
       setMousePos({ x, y });
     };
-
     window.addEventListener("mousemove", handleMouseMove);
     return () => window.removeEventListener("mousemove", handleMouseMove);
   }, []);
 
   useEffect(() => {
-    // Start the hero animation slightly after page load
     const timer = setTimeout(() => setHeroSlidUp(true), 1500);
     return () => clearTimeout(timer);
   }, []);
 
-  const handleSimulationComplete = useCallback((data) => {
-    setLatestResult(data);
-    setPage("responder");
-    const status = data?.layers?.["4_verification"]?.decision?.status;
-    setIsAlert(status === "CRITICAL" || status === "EMERGENCY");
-    document.getElementById('app-section')?.scrollIntoView({ behavior: 'smooth' });
-  }, []);
+  const handleLogin = (userData) => {
+    setUser(userData);
+    if (userData.role === 'admin') setPage("admin");
+    else if (userData.role === 'responder') setPage("responder");
+    else setPage("citizen");
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem("aurora_token");
+    localStorage.removeItem("aurora_user");
+    setUser(null);
+    setPage("login");
+  };
+
+  // RBAC Navigation Logic
+  const getNavItems = () => {
+    const items = [
+      { id: "demo", label: "Demo Simulator" },
+    ];
+    
+    if (user) {
+      if (user.role === 'admin') items.push({ id: "admin", label: "Command Center" });
+      if (user.role === 'responder') items.push({ id: "responder", label: "Deployments" });
+      if (user.role === 'citizen') items.push({ id: "citizen", label: "SOS Portal" });
+      items.push({ id: "logout", label: "Logout", action: handleLogout });
+    } else {
+      items.push({ id: "login", label: "Login" });
+      items.push({ id: "signup", label: "Sign Up" });
+    }
+    return items;
+  };
 
   return (
     <div 
       className={`app-layout ${page === "citizen" ? "citizen-mode" : ""}`}
       style={{ '--mouse-x': `${mousePos.x}%`, '--mouse-y': `${mousePos.y}%` }}
     >
-      {/* The spotlight overlay is rendered here, below main content (z-index wise) */}
       <div className="spotlight-overlay" />
       
       <Navbar 
         page={page} 
-        setPage={setPage} 
+        setPage={(p) => {
+          const item = getNavItems().find(i => i.id === p);
+          if (item?.action) item.action();
+          else setPage(p);
+        }} 
         isAlert={isAlert} 
-        navItems={NAV_ITEMS} 
+        navItems={getNavItems()} 
       />
 
       <main className="main-content">
-        {/* Landing Hero Section */}
         <section className="hero-section">
           <div className="hero-content">
             <div className="hero-title-group">
@@ -73,43 +99,21 @@ export default function App() {
               <h1 className="hero-tech">TECH</h1>
             </div>
             <p className="hero-desc">
-              In the critical window after an earthquake, every second counts. AURORA TECH is an AI-powered global resilience system that transforms a network of ordinary smartphones into a sophisticated seismic grid. By orchestrating an 11-layer autonomous pipeline, we bridge the gap between detection and rescue—delivering tactical dispatch briefs and safe-route planning in under 30 seconds.
+              Building the future of autonomous disaster intelligence. Real-time coordination, AI-native triage, and mission-critical deployment in the palm of your hand.
             </p>
           </div>
-          
-          {/* Seismic Wave Component */}
           <div className={`hero-wave-container ${heroSlidUp ? "visible" : ""}`}>
             <SeismicWave height={250} magnitude={7.2} intensity={1.2} speed={0.003} />
           </div>
         </section>
 
-        {/* Application Components Section */}
         <section id="app-section" className="app-section">
-          <div style={{ display: page === "demo" ? "block" : "none" }}>
-            <DemoSimulator onSimulationComplete={handleSimulationComplete} />
-          </div>
-          <div style={{ display: page === "responder" ? "block" : "none" }}>
-            <ResponderDashboard
-              pipelineResult={latestResult}
-              onGoToSimulator={() => setPage("demo")}
-            />
-          </div>
-          <div style={{ display: page === "citizen" ? "block" : "none" }}>
-            <button
-              className="btn btn-outline"
-              style={{ marginBottom: 16 }}
-              onClick={() => setPage("demo")}
-            >
-              ← Back to Dashboard
-            </button>
-            <CitizenApp />
-          </div>
-          <div style={{ display: page === "login" ? "block" : "none" }}>
-            <LoginPage setPage={setPage} />
-          </div>
-          <div style={{ display: page === "signup" ? "block" : "none" }}>
-            <SignUpPage setPage={setPage} />
-          </div>
+          {page === "demo" && <DemoSimulator onSimulationComplete={(data) => { setLatestResult(data); setPage("admin"); }} />}
+          {page === "admin" && user?.role === 'admin' && <CommandCenter />}
+          {page === "responder" && user?.role === 'responder' && <ResponderDashboard pipelineResult={latestResult} />}
+          {page === "citizen" && <CitizenApp />}
+          {page === "login" && <LoginPage onLogin={handleLogin} setPage={setPage} />}
+          {page === "signup" && <SignUpPage setPage={setPage} />}
         </section>
         <Footer />
       </main>
