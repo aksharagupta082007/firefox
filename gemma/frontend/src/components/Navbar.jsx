@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 
 function Navbar({ page, setPage, isAlert, navItems }) {
   const [scrolled, setScrolled] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -18,13 +19,18 @@ function Navbar({ page, setPage, isAlert, navItems }) {
         <h1>AURORA TECH</h1>
       </a>
 
-      <div className="navbar-links">
+      <button className="hamburger" onClick={() => setMenuOpen(!menuOpen)}>
+        ☰
+      </button>
+
+      <div className={`navbar-links ${menuOpen ? "open" : ""}`}>
         {navItems.map((item) => (
           <button
             key={item.id}
             className={`nav-link ${page === item.id ? "active" : ""}`}
             onClick={() => {
               setPage(item.id);
+              setMenuOpen(false);
               // scroll to app section smoothly
               document.getElementById('app-section')?.scrollIntoView({ behavior: 'smooth' });
             }}

@@ -51,7 +51,7 @@ export default function SeismicWave({
     if (!canvas) return;
 
     const dpr = window.devicePixelRatio || 1;
-    const W   = canvas.offsetWidth;
+    const W   = canvas.parentElement.clientWidth;
     const H   = canvas.offsetHeight;
 
     if (canvas.width !== W * dpr || canvas.height !== H * dpr) {
