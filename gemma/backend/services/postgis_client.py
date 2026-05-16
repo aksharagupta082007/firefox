@@ -12,7 +12,7 @@ from datetime import datetime
 
 logger = logging.getLogger("aurora.services.postgis")
 
-DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://postgres:postgres@127.0.0.1:5432/aurora")
+DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://aurora:aurora@127.0.0.1:5432/aurora_db")
 
 Base = declarative_base()
 
@@ -35,7 +35,7 @@ class Responder(Base):
 
 class PostGISClient:
     def __init__(self):
-        self.engine = create_engine(DATABASE_URL)
+        self.engine = create_engine(DATABASE_URL, pool_pre_ping=True)
         self.SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=self.engine)
         
     def init_db(self):
@@ -44,7 +44,7 @@ class PostGISClient:
             Base.metadata.create_all(bind=self.engine)
             logger.info("✅ PostGIS tables initialized.")
         except Exception as e:
-            logger.error(f"❌ Failed to initialize PostGIS: {e}")
+            logger.warning(f"⚠️ PostGIS unavailable; geospatial persistence is disabled: {e}")
 
     def save_incident(self, incident_id: str, lat: float, lon: float, message: str, triage: str = "medium"):
         session = self.SessionLocal()
@@ -59,7 +59,7 @@ class PostGISClient:
             session.merge(db_incident)
             session.commit()
         except Exception as e:
-            logger.error(f"❌ Failed to save incident to PostGIS: {e}")
+            logger.warning(f"⚠️ Failed to save incident to PostGIS: {e}")
         finally:
             session.close()
 

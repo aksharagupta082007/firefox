@@ -46,7 +46,13 @@ class WebSocketManager:
 
     async def start_pubsub_listener(self):
         """Listener that waits for messages from Redis and broadcasts them."""
-        await redis_service.connect()
+        try:
+            await pubsub.subscribe("broadcast:admin", "broadcast:responder", "broadcast:citizen")
+        except Exception as e:
+            logger.warning(f"⚠️ Redis Pub/Sub disabled: {e}")
+            await pubsub.close()
+            return
+
         pubsub = redis_service.client.pubsub()
         await pubsub.subscribe("broadcast:admin", "broadcast:responder", "broadcast:citizen")
         
@@ -61,9 +67,16 @@ class WebSocketManager:
                     data = json.loads(message['data'])
                     await self.broadcast_to_role(role, data)
                 await asyncio.sleep(0.01) # Non-blocking sleep
+        except asyncio.CancelledError:
+            logger.info("Redis Pub/Sub listener stopped.")
+            raise
         except Exception as e:
             logger.error(f"❌ PubSub Listener Error: {e}")
         finally:
-            await pubsub.unsubscribe()
+            try:
+                await pubsub.unsubscribe()
+            except Exception:
+                pass
+            await pubsub.close()
 
 ws_manager = WebSocketManager()

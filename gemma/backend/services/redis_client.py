@@ -17,7 +17,14 @@ class RedisClient:
 
     async def connect(self):
         if not self.client:
-            self.client = redis.from_url(self.redis_url, decode_responses=True)
+            client = redis.from_url(self.redis_url, decode_responses=True)
+            try:
+                await client.ping()
+            except Exception:
+                await client.close()
+                self.client = None
+                raise
+            self.client = client
             logger.info(f"✅ Connected to Redis at {self.redis_url}")
 
     async def disconnect(self):

@@ -12,6 +12,15 @@ const getHeaders = () => {
 
 export const api = {
   // Auth
+  async signup(payload) {
+    const res = await fetch(`${API_BASE}/api/signup`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+    return res.json();
+  },
+
   async login(username, password) {
     // In a real app, this would be a POST to /token
     // For now, we mock the role based on the username for demonstration

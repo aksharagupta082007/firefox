@@ -3,6 +3,7 @@ AURORA TECH — Production Entry Point
 Centralized AI Command System for Disaster Response.
 """
 import asyncio
+import json
 import logging
 import os
 from datetime import datetime
@@ -51,18 +52,22 @@ app.add_middleware(
 )
 
 from fastapi.security import OAuth2PasswordRequestForm
-from backend.auth.jwt_handler import create_access_token, verify_password, get_password_hash
+from backend.auth.jwt_handler import create_access_token, verify_password
+from backend.auth.user_store import create_user, get_user
 
-# Mock User DB (In production, this would be PostgreSQL)
-USERS_DB = {
-    "admin": {"username": "admin", "password": get_password_hash("aurora2026"), "role": "admin"},
-    "responder_01": {"username": "responder_01", "password": get_password_hash("rescue_now"), "role": "responder"},
-    "citizen_demo": {"username": "citizen_demo", "password": get_password_hash("safety_first"), "role": "citizen"},
-}
+
+class SignupRequest(BaseModel):
+    username: str | None = None
+    email: str | None = None
+    password: str
+    role: str = "citizen"
+    phone: str | None = None
+    location: str | None = None
+    extraDetail: str | None = None
 
 @app.post("/token")
 async def login(form_data: OAuth2PasswordRequestForm = Depends()):
-    user = USERS_DB.get(form_data.username)
+    user = get_user(form_data.username)
     if not user or not verify_password(form_data.password, user["password"]):
         raise HTTPException(status_code=400, detail="Incorrect username or password")
     
@@ -74,16 +79,20 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends()):
     }
 
 @app.post("/api/signup")
-async def signup(username: str, password: str, role: str = "citizen"):
-    if username in USERS_DB:
+async def signup(payload: SignupRequest):
+    username = payload.username or payload.email
+    try:
+        user = create_user(username or "", payload.password, payload.role)
+    except KeyError:
         raise HTTPException(status_code=400, detail="Username already registered")
-    
-    USERS_DB[username] = {
-        "username": username,
-        "password": get_password_hash(password),
-        "role": role
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+    return {
+        "status": "success",
+        "message": f"User {user['username']} created as {user['role']}",
+        "user": {"username": user["username"], "role": user["role"]},
     }
-    return {"status": "success", "message": f"User {username} created as {role}"}
 
 # ── Schemas ──────────────────────────────────────────────────────────
 class SOSInput(BaseModel):

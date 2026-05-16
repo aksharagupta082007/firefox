@@ -43,7 +43,7 @@ const LoginPage = ({ onLogin, setPage }) => {
             <input 
               type="text" 
               name="username"
-              placeholder="Username" 
+              placeholder="Email or username" 
               className="input" 
               value={formData.username}
               onChange={handleChange}
