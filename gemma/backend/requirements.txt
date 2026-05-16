@@ -15,3 +15,11 @@ httpx
 pydantic
 google-genai
 shapely
+langgraph
+langchain-google-genai
+ollama
+python-jose[cryptography]
+passlib[bcrypt]
+python-multipart
+faster-whisper
+piper-tts

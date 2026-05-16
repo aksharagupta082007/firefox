@@ -764,3 +764,143 @@ h3 { font-size: 1.2rem; }
 }
 
 .leaflet-control-attribution a { color: var(--contrast-primary) !important; }
+/* ═══ Command Center ══════════════════════════════════════════ */
+.command-center {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  min-height: 80vh;
+}
+
+.cc-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.cc-stats {
+  display: flex;
+  gap: 12px;
+}
+
+.stat-badge {
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border-subtle);
+}
+
+.stat-badge.alert {
+  background: rgba(232, 80, 2, 0.15);
+  color: var(--severity-critical);
+  border-color: var(--severity-critical);
+}
+
+.cc-grid {
+  display: grid;
+  grid-template-columns: 400px 1fr;
+  gap: 24px;
+  flex: 1;
+}
+
+.cc-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+  max-height: 700px;
+}
+
+.cc-nav {
+  display: flex;
+  gap: 8px;
+  border-bottom: 1px solid var(--border-subtle);
+  padding-bottom: 12px;
+}
+
+.nav-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-weight: 600;
+  font-size: 0.85rem;
+  cursor: pointer;
+  padding: 4px 8px;
+}
+
+.nav-btn.active {
+  color: var(--text-primary);
+  border-bottom: 2px solid var(--contrast-primary);
+}
+
+.cc-list-container {
+  overflow-y: auto;
+  flex: 1;
+}
+
+.incident-item {
+  padding: 16px;
+  border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, 0.03);
+  margin-bottom: 12px;
+  border-left: 4px solid var(--severity-medium);
+  transition: all 0.3s ease;
+}
+
+.incident-item:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.incident-item.critical { border-left-color: var(--severity-critical); }
+.incident-item.high { border-left-color: var(--severity-high); }
+
+.incident-info strong { display: block; font-size: 0.75rem; margin-bottom: 4px; }
+.incident-info span { font-size: 0.7rem; color: var(--text-muted); }
+.incident-info p { font-size: 0.85rem; margin: 8px 0; }
+
+.btn-approve {
+  width: 100%;
+  padding: 8px;
+  border-radius: var(--radius-sm);
+  background: var(--contrast-primary);
+  color: white;
+  border: none;
+  font-weight: 700;
+  font-size: 0.8rem;
+  cursor: pointer;
+  margin-top: 8px;
+}
+
+.oversight-briefing {
+  padding: 12px;
+}
+
+.oversight-briefing h3 { margin-bottom: 12px; }
+.oversight-briefing h4 { margin: 16px 0 8px; font-size: 0.9rem; }
+.oversight-briefing p { font-size: 0.9rem; color: var(--text-secondary); line-height: 1.5; }
+.oversight-briefing ul { padding-left: 20px; font-size: 0.85rem; color: var(--text-secondary); }
+
+.efficiency-meter {
+  margin-top: 24px;
+}
+
+.efficiency-meter span { font-size: 0.8rem; font-weight: 700; display: block; margin-bottom: 8px; }
+
+.meter-bar {
+  height: 8px;
+  background: var(--contrast-primary);
+  border-radius: 4px;
+  box-shadow: 0 0 12px var(--contrast-primary);
+}
+
+.cc-map-view {
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  border: 1px solid var(--border-subtle);
+  height: 700px;
+}

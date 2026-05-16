@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import styled from 'styled-components';
+import { api } from '../api';
 
 const SignUpPage = ({ setPage }) => {
   const [formData, setFormData] = useState({
@@ -17,25 +18,17 @@ const SignUpPage = ({ setPage }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log("Submitting to DB:", formData);
     try {
-      const response = await fetch('http://localhost:8000/api/signup', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(formData)
-      });
-      if (response.ok) {
-        alert("Sign up successful!");
+      const data = await api.signup(formData);
+      if (data.status === "success") {
+        alert("Sign up successful! Use your email as the username to log in.");
         setPage("login");
       } else {
-        alert("Error signing up.");
+        alert(data.detail || "Error signing up.");
       }
     } catch (error) {
       console.error("Failed to fetch", error);
-      alert("Sign up submitted (check console). API might not be implemented yet.");
-      setPage("login");
+      alert("Could not reach the signup API. Please confirm the backend is running.");
     }
   };
 
