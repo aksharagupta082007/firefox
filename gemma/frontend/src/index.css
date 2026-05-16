@@ -189,7 +189,7 @@ h3 { font-size: 1.2rem; }
   border: none;
   color: #000;
   font-size: 1.2rem;
-  font-family: 'Armstrong', sans-serif;
+  font-family: 'JetBrains Mono', sans-serif;
   font-weight: 400;
   cursor: pointer;
   padding: 8px 16px;
@@ -221,10 +221,10 @@ h3 { font-size: 1.2rem; }
   width: calc(100% - 32px);
 }
 
-.nav-link.active {
+/* .nav-link.active {
   color: var(--contrast-primary);
   background: transparent;
-}
+} */
 
 .nav-link.active::after {
   width: calc(100% - 32px);
@@ -342,6 +342,7 @@ h3 { font-size: 1.2rem; }
 
 .hero-wave-container {
   position: absolute;
+  width: 100%;
   top: 50%;
   left: 0;
   right: 0;
@@ -904,3 +905,102 @@ h3 { font-size: 1.2rem; }
   border: 1px solid var(--border-subtle);
   height: 700px;
 }
+
+/* ── Mobile Responsiveness ──────────────────────────────────────────────── */
+
+.hamburger {
+  display: none;
+  background: none;
+  border: none;
+  font-size: 1.8rem;
+  color: #000;
+  cursor: pointer;
+  z-index: 1000;
+  padding: 8px;
+}
+
+@media (max-width: 768px) {
+  /* Navbar / Hamburger Menu */
+  .hamburger {
+    display: block;
+  }
+  
+  .navbar-links {
+    position: absolute;
+    top: 64px;
+    left: 0;
+    right: 0;
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(10px);
+    flex-direction: column;
+    padding: 20px;
+    gap: 16px;
+    transform: translateY(-150%);
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.4s ease;
+    border-bottom: 1px solid rgba(0,0,0,0.1);
+    box-shadow: 0 10px 20px rgba(0,0,0,0.05);
+  }
+  
+  .navbar-links.open {
+    transform: translateY(0);
+    opacity: 1;
+    visibility: visible;
+  }
+  
+  .navbar-status {
+    display: none; /* Hide status pill on mobile to make room for menu */
+  }
+
+  /* Hero Section */
+  .hero-content {
+    top: 60px;
+    left: 20px;
+    right: 20px;
+    bottom: 40px;
+    width: auto;
+  }
+  
+  .hero-aurora {
+    font-size: 3.5rem;
+    letter-spacing: 2px;
+  }
+  
+  .hero-tech {
+    font-size: 1.8rem;
+  }
+  
+  .hero-desc {
+    font-size: 0.85rem;
+  }
+  
+  .hero-wave-container {
+    width: 200%;
+    left: -50%;
+    top: 40%;
+    transform: scale(0.5);
+    transform-origin: center center;
+  }
+
+  /* Citizen Mode Adjustments */
+  .sim-field input, .chat-input {
+    font-size: 1rem;
+    padding: 12px;
+  }
+  
+  .btn {
+    padding: 12px 20px;
+    font-size: 1rem;
+  }
+  
+  .card {
+    padding: 16px;
+  }
+  
+  /* Make grid in quick sos stack on mobile */
+  .card > div[style*="grid-template-columns: 1fr 1fr"] {
+    grid-template-columns: 1fr !important;
+  }
+}
+
