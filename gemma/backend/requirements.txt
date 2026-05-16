@@ -13,13 +13,10 @@ redis
 websockets
 httpx
 pydantic
-google-genai
+huggingface_hub
 shapely
 langgraph
-langchain-google-genai
-ollama
+python-dotenv
 python-jose[cryptography]
 passlib[bcrypt]
 python-multipart
-faster-whisper
-piper-tts

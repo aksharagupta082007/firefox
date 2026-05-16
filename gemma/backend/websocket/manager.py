@@ -46,16 +46,19 @@ class WebSocketManager:
 
     async def start_pubsub_listener(self):
         """Listener that waits for messages from Redis and broadcasts them."""
+        pubsub = None
         try:
+            pubsub = redis_service.client.pubsub()
             await pubsub.subscribe("broadcast:admin", "broadcast:responder", "broadcast:citizen")
         except Exception as e:
             logger.warning(f"⚠️ Redis Pub/Sub disabled: {e}")
-            await pubsub.close()
+            if pubsub:
+                try:
+                    await pubsub.close()
+                except Exception:
+                    pass
             return
 
-        pubsub = redis_service.client.pubsub()
-        await pubsub.subscribe("broadcast:admin", "broadcast:responder", "broadcast:citizen")
-        
         logger.info("📡 WebSocket Pub/Sub listener started.")
         
         try:

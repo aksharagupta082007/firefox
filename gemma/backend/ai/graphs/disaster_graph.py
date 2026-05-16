@@ -2,13 +2,13 @@
 AURORA TECH — Disaster Orchestration Graph
 Uses LangGraph to coordinate agents and manage state.
 """
-from typing import TypedDict, Annotated, List, Union, Dict, Any
+from typing import TypedDict, List, Dict, Any
 from langgraph.graph import StateGraph, END
-from langgraph.checkpoint.memory import MemorySaver # Basic in-memory checkpointing for demonstration
-from backend.ai.agents.triage_agent import triage_agent
-from backend.ai.agents.tactical_agent import tactical_agent
-from backend.ai.agents.oversight_agent import oversight_agent
-from backend.ai.schemas.emergency import SOSReport, TriageIntelligence, TacticalAction
+from langgraph.checkpoint.memory import MemorySaver
+from backend.ai.agents.triage_agent import run_triage
+from backend.ai.agents.tactical_agent import run_tactical
+from backend.ai.agents.oversight_agent import run_oversight
+from backend.ai.schemas.emergency import SOSReport
 from backend.services.redis_client import redis_service
 import logging
 
@@ -16,8 +16,8 @@ logger = logging.getLogger("aurora.ai.graphs.disaster")
 
 class GraphState(TypedDict):
     sos_report: SOSReport
-    triage_results: TriageIntelligence
-    tactical_recommendations: List[TacticalAction]
+    triage_results: Dict[str, Any]
+    tactical_recommendations: Dict[str, Any]
     oversight_summary: Dict[str, Any]
     history: List[str]
     next_step: str
@@ -25,7 +25,7 @@ class GraphState(TypedDict):
 async def triage_node(state: GraphState):
     """Extracts intelligence from the raw SOS report."""
     report = state["sos_report"]
-    intelligence = await triage_agent.process(report.raw_message)
+    intelligence = await run_triage(report.raw_message)
     
     return {
         **state,
@@ -35,13 +35,10 @@ async def triage_node(state: GraphState):
 
 async def tactical_node(state: GraphState):
     """Generates deployment recommendations based on shared state."""
-    # Fetch global state from Redis for reasoning context
-    global_state = await redis_service.get_state("operational_state") or {}
+    # Build incidents list from current triage
+    incidents = [state["triage_results"]]
     
-    # Add current triage results to context
-    global_state["current_triage"] = state["triage_results"].model_dump()
-    
-    recommendations = await tactical_agent.reason(global_state)
+    recommendations = await run_tactical(incidents)
     
     return {
         **state,
@@ -51,9 +48,12 @@ async def tactical_node(state: GraphState):
 
 async def oversight_node(state: GraphState):
     """Synthesizes the global operational state for command center."""
-    global_state = await redis_service.get_state("operational_state") or {}
+    full_state = {
+        "triage": state["triage_results"],
+        "tactical": state["tactical_recommendations"],
+    }
     
-    summary = await oversight_agent.synthesize(global_state)
+    summary = await run_oversight(full_state)
     
     # Update global state in Redis
     await redis_service.set_state("global_summary", summary)
@@ -71,13 +71,13 @@ async def update_state_node(state: GraphState):
     
     # Update Redis atomically
     await redis_service.update_list_atomic("active_incidents", report.model_dump())
-    await redis_service.set_state(f"triage:{report.id}", intelligence.model_dump())
+    await redis_service.set_state(f"triage:{report.id}", intelligence)
     
     # Broadcast event for real-time UI
     await redis_service.publish_event("broadcast:admin", {
         "type": "new_incident",
         "incident_id": report.id,
-        "severity": intelligence.triage_level,
+        "severity": intelligence.get("triage_level", "HIGH"),
         "lat": report.lat,
         "lon": report.lon
     })

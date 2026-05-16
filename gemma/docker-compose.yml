@@ -18,7 +18,7 @@ services:
       timeout: 3s
       retries: 5
 
-  # ── Redis (pub/sub for WebSocket broadcast) ──────────────────
+  # ── Redis (pub/sub + state store) ────────────────────────────
   redis:
     image: redis:7-alpine
     ports:
@@ -27,16 +27,7 @@ services:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
 
-  # ── Ollama (Gemma 4 Edge / E2B) ─────────────────────────────
-  ollama:
-    image: ollama/ollama:latest
-    ports:
-      - "11434:11434"
-    volumes:
-      - ollama_data:/root/.ollama
-
-
-  # ── Backend (FastAPI) ────────────────────────────────────────
+  # ── Backend (FastAPI + Gemma 4 via google.genai) ─────────────
   backend:
     build:
       context: ./backend
@@ -46,15 +37,15 @@ services:
     environment:
       DATABASE_URL: postgresql://aurora:aurora@db:5432/aurora_db
       REDIS_URL: redis://redis:6379
-      OLLAMA_BASE_URL: http://ollama:11434
-      GOOGLE_AI_API_KEY: ${GOOGLE_AI_API_KEY:-}
+    env_file:
+      - ./backend/.env
     depends_on:
       db:
         condition: service_healthy
       redis:
         condition: service_healthy
 
-  # ── Frontend (Vite dev or nginx) ─────────────────────────────
+  # ── Frontend (Vite dev server) ───────────────────────────────
   frontend:
     build:
       context: ./frontend
@@ -67,4 +58,3 @@ services:
 
 volumes:
   pgdata:
-  ollama_data:

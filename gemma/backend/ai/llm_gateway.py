@@ -1,71 +1,95 @@
 """
-AURORA TECH — Unified LLM Gateway
-Abstracts Gemma 4 (Cloud) and Ollama (Edge) with automatic fallback.
+AURORA TECH — Unified LLM Gateway (Hybrid)
+Primary: Hugging Face API (Gemma 4)
+Fallback: Local Ollama API (Gemma 2B) via OpenAI SDK
 """
+from huggingface_hub import AsyncInferenceClient
+from openai import AsyncOpenAI
 import os
+import asyncio
 import logging
-from typing import List, Dict, Any, Optional
-from langchain_google_genai import ChatGoogleGenerativeAI
-import ollama
 
 logger = logging.getLogger("aurora.ai.gateway")
 
-class LLMGateway:
-    def __init__(self):
-        self.cloud_model_name = "gemini-1.5-pro-latest" # Using Gemini/Gemma 4 equivalent
-        self.edge_model_name = "gemma2"
-        self.api_key = os.getenv("GOOGLE_AI_API_KEY")
+# Primary: Hugging Face
+hf_token = os.getenv("HUGGINGFACE_API_KEY")
+hf_client = AsyncInferenceClient(token=hf_token)
+GEMMA_FAST = os.getenv("GEMMA_FAST_MODEL", "google/gemma-4-31B-it")
+GEMMA_SMART = os.getenv("GEMMA_SMART_MODEL", "google/gemma-4-31B-it")
+
+# Fallback: Local Ollama
+OLLAMA_URL = os.getenv("OLLAMA_URL", "http://host.docker.internal:11434/v1")
+LOCAL_MODEL = os.getenv("LOCAL_FALLBACK_MODEL", "gemma2:2b")
+local_client = AsyncOpenAI(base_url=OLLAMA_URL, api_key="ollama")
+
+
+async def call_gemma_fast(prompt: str) -> str:
+    """Fast model — citizen chat, low-latency triage chat."""
+    messages = [{"role": "user", "content": prompt}]
+    
+    # Try Primary (Online)
+    try:
+        response = await hf_client.chat_completion(
+            model=GEMMA_FAST,
+            messages=messages,
+            temperature=0.7,
+            max_tokens=300,
+        )
+        return response.choices[0].message.content
+    except Exception as e:
+        logger.warning(f"🌐 HF API Failed (Fast): {e}. Fallback to LOCAL ({LOCAL_MODEL})")
         
-        # Initialize Cloud LLM if API key exists
-        self.cloud_llm = None
-        if self.api_key:
-            try:
-                self.cloud_llm = ChatGoogleGenerativeAI(
-                    model=self.cloud_model_name,
-                    google_api_key=self.api_key,
-                    temperature=0.1,
-                    convert_system_message_to_human=True
-                )
-                logger.info("✅ Cloud LLM (Gemma/Gemini) initialized.")
-            except Exception as e:
-                logger.error(f"❌ Failed to initialize Cloud LLM: {e}")
+    # Fallback (Offline)
+    try:
+        response = await local_client.chat.completions.create(
+            model=LOCAL_MODEL,
+            messages=messages,
+            temperature=0.7,
+            max_tokens=300,
+        )
+        return response.choices[0].message.content
+    except Exception as e:
+        logger.error(f"🛑 Local Fallback Failed (Fast): {e}")
+        raise
 
-    async def get_completion(self, 
-                               prompt: str, 
-                               system_instruction: Optional[str] = None,
-                               schema: Optional[Dict[str, Any]] = None,
-                               force_edge: bool = False) -> Dict[str, Any]:
-        """
-        Get completion with automatic fallback to edge model.
-        """
-        if not force_edge and self.cloud_llm:
-            try:
-                # Cloud inference
-                messages = []
-                if system_instruction:
-                    messages.append(("system", system_instruction))
-                messages.append(("human", prompt))
-                
-                response = await self.cloud_llm.ainvoke(messages)
-                return {"content": response.content, "provider": "cloud"}
-            except Exception as e:
-                logger.warning(f"⚠️ Cloud LLM failed, falling back to edge: {e}")
 
-        # Edge fallback (Ollama)
-        try:
-            logger.info(f"💾 Using Edge LLM ({self.edge_model_name})...")
-            options = {"temperature": 0.1}
-            response = ollama.chat(
-                model=self.edge_model_name,
-                messages=[
-                    {'role': 'system', 'content': system_instruction or ""},
-                    {'role': 'user', 'content': prompt},
-                ],
-                options=options
-            )
-            return {"content": response['message']['content'], "provider": "edge"}
-        except Exception as e:
-            logger.error(f"❌ Edge LLM also failed: {e}")
-            raise Exception("Critical Failure: No LLM providers available.")
+async def call_gemma_smart(prompt: str, system: str = None) -> str:
+    """Full model — triage, tactical, oversight agents."""
+    messages = []
+    if system:
+        messages.append({"role": "system", "content": system})
+    messages.append({"role": "user", "content": prompt})
+    
+    # Try Primary (Online)
+    try:
+        response = await hf_client.chat_completion(
+            model=GEMMA_SMART,
+            messages=messages,
+            temperature=0.2,
+            max_tokens=1024,
+        )
+        return response.choices[0].message.content
+    except Exception as e:
+        logger.warning(f"🌐 HF API Failed (Smart): {e}. Fallback to LOCAL ({LOCAL_MODEL})")
+        
+    # Fallback (Offline)
+    try:
+        response = await local_client.chat.completions.create(
+            model=LOCAL_MODEL,
+            messages=messages,
+            temperature=0.2,
+            max_tokens=1024,
+        )
+        return response.choices[0].message.content
+    except Exception as e:
+        logger.error(f"🛑 Local Fallback Failed (Smart): {e}")
+        raise
 
-llm_gateway = LLMGateway()
+
+async def test_connection() -> dict:
+    """Quick health check — verifies API key + model access."""
+    try:
+        r = await call_gemma_fast("Reply with exactly: AURORA ONLINE")
+        return {"status": "connected", "primary": GEMMA_FAST, "fallback": LOCAL_MODEL, "response": r.strip()}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}

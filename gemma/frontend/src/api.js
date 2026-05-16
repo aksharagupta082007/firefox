@@ -89,6 +89,40 @@ export const api = {
   async getInfrastructure() {
     const res = await fetch(`${API_BASE}/api/infrastructure`);
     return res.json();
+  },
+
+  // Phyphox Sensor Management
+  async registerDevice(ip, name) {
+    const res = await fetch(`${API_BASE}/api/sensor/register`, {
+      method: "POST",
+      headers: getHeaders(),
+      body: JSON.stringify({ ip, name })
+    });
+    return res.json();
+  },
+
+  async testSensor() {
+    const res = await fetch(`${API_BASE}/api/sensor/test`, {
+      headers: getHeaders()
+    });
+    return res.json();
+  },
+
+  async getDevices() {
+    const res = await fetch(`${API_BASE}/api/sensor/devices`, {
+      headers: getHeaders()
+    });
+    return res.json();
+  },
+
+  // Simulation
+  async simulate(params) {
+    const res = await fetch(`${API_BASE}/api/simulate`, {
+      method: "POST",
+      headers: getHeaders(),
+      body: JSON.stringify(params)
+    });
+    return res.json();
   }
 };
 
