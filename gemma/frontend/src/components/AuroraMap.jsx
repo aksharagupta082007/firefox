@@ -33,7 +33,7 @@ const UNIT_ICONS = {
   police: "P",
   ndrf: "N"
 };
-export default function AuroraMap({ data, height = 500 }) {
+export default function AuroraMap({ data = {}, points = [], height = 500 }) {
   const mapRef = useRef(null);
   const leafletMap = useRef(null);
   const layersRef = useRef([]);
@@ -159,7 +159,22 @@ export default function AuroraMap({ data, height = 500 }) {
         L.marker([unit.lat, unit.lon], { icon }).bindPopup(`<b>${unit.unit_name}</b><br/>Type: ${unit.type}`).addTo(unitLayer);
       });
     }
-  }, [data]);
+    if (points.length) {
+      const pointsLayer = L.layerGroup().addTo(map);
+      layersRef.current.push(pointsLayer);
+      const bounds = [];
+      points.forEach((point) => {
+        if (typeof point.lat !== "number" || typeof point.lon !== "number") return;
+        const icon = svgIcon(point.type === "responder" ? "R" : point.type === "incident" ? "!" : "P", 24);
+        const latLng = [point.lat, point.lon];
+        bounds.push(latLng);
+        L.marker(latLng, { icon }).bindPopup(`<b>${point.label || "Map Point"}</b>`).addTo(pointsLayer);
+      });
+      if (!data.epicenter && bounds.length) {
+        map.fitBounds(bounds, { padding: [36, 36], maxZoom: 14 });
+      }
+    }
+  }, [data, points]);
   return <div
     ref={mapRef}
     style={{
