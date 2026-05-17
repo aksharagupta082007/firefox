@@ -140,6 +140,31 @@ async def submit_voice_sos(inp: AudioInput, background_tasks: BackgroundTasks):
     report_id = f"voice_sos_{int(datetime.utcnow().timestamp())}"
     report = SOSReport(id=report_id, lat=inp.lat, lon=inp.lon, raw_message=f"{text} | Context: {context}")
     
+    # Create and cache a pending incident immediately so it renders on the admin dashboard
+    pending_incident = {
+        "id": report_id,
+        "message": f"[Voice SOS] {text}",
+        "lat": inp.lat,
+        "lon": inp.lon,
+        "triage_level": "MODERATE",  # Yellow in dashboard
+        "ai_response": "AI processing (triage & tactical analysis)...",
+        "timestamp": report.timestamp.isoformat() if hasattr(report.timestamp, "isoformat") else datetime.utcnow().isoformat(),
+        "status": "PENDING",
+        "battery": 100,
+        "lang": "english",
+    }
+    
+    try:
+        redis = await get_redis()
+        await redis.set(f"incident:{report_id}", json.dumps(pending_incident))
+        await redis_service.update_list_atomic("active_incidents", pending_incident)
+        await redis.publish("broadcast:admin", json.dumps({
+            "type": "new_incident",
+            "incident": pending_incident,
+        }))
+    except Exception as e:
+        logger.error(f"Error publishing pending voice SOS incident: {e}")
+    
     thread = {"configurable": {"thread_id": report_id}}
     background_tasks.add_task(disaster_graph.ainvoke, {"sos_report": report, "history": []}, thread)
     

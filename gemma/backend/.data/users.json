@@ -8,5 +8,15 @@
     "username": "swara.011211@gmail.com",
     "password": "$2b$12$HVJCJePnCQcxQnImG7bPxuhXKprevLoMZkIDQhxwC5ja3NpyWb..e",
     "role": "citizen"
+  },
+  "patient@mindscreen.com": {
+    "username": "patient@mindscreen.com",
+    "password": "$2b$12$eLcbMc8B7oggwX5A4BmgEuix4lM0PTmH2dUIY6u1GlmGqFA7uNMLy",
+    "role": "responder"
+  },
+  "clinician@mindscreen.com": {
+    "username": "clinician@mindscreen.com",
+    "password": "$2b$12$1Qh3KTxY1DKpCoFYT/TbCO6FSCY0ifYzPWZhochqUn4ORnNCkrD9i",
+    "role": "citizen"
   }
 }
