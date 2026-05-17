@@ -41,9 +41,19 @@ CREATE EXTENSION postgis;
 If your local setup differs from the defaults, create a `.env` file in `backend/`:
 
 ```env
-DATABASE_URL=postgresql://postgres:your_password@127.0.0.1:5432/aurora
-REDIS_URL=redis://127.0.0.1:6379/0
-GOOGLE_AI_API_KEY=your_gemini_api_key
+DATABASE_URL=postgresql://aurora:aurora@localhost:5433/aurora_db
+REDIS_URL=redis://localhost:6379
+
+# Primary Online LLM (Hugging Face)
+HUGGINGFACE_API_KEY=your_hugging_face_token
+GEMMA_FAST_MODEL=google/gemma-4-31B-it
+GEMMA_SMART_MODEL=google/gemma-4-31B-it
+
+# Offline Edge Fallback (Local Ollama)
+OLLAMA_URL=http://localhost:11434/v1
+LOCAL_FALLBACK_MODEL=gemma2:2b
+
+# Security
 JWT_SECRET_KEY=generate_a_random_string_here
 ```
 
