@@ -34,6 +34,8 @@ services:
       dockerfile: Dockerfile
     ports:
       - "8000:8000"
+    volumes:
+      - ./backend:/app/backend
     environment:
       DATABASE_URL: postgresql://aurora:aurora@db:5432/aurora_db
       REDIS_URL: redis://redis:6379
@@ -52,6 +54,9 @@ services:
       dockerfile: Dockerfile
     ports:
       - "5173:5173"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
     environment:
       VITE_API_URL: http://localhost:8000
       VITE_WS_URL: ws://localhost:8000

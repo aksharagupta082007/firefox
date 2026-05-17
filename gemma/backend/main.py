@@ -181,6 +181,10 @@ async def websocket_endpoint(websocket: WebSocket, role: str):
             # Handle incoming data (Ping/Pong or Audio Chunks)
             data = await websocket.receive()
             
+            # Check for raw disconnect event to prevent Starlette RuntimeError on subsequent loop
+            if data.get("type") == "websocket.disconnect":
+                raise WebSocketDisconnect(code=data.get("code", 1000))
+            
             if "bytes" in data:
                 # Direct streaming voice SOS
                 text = await voice_processor.transcribe_stream(data["bytes"])
@@ -476,6 +480,169 @@ RULES:
         except Exception as e:
             logger.error(f"Streaming SOS failed: {e}")
             yield f'data: {{"type":"error","message":"Help is coming. Stay calm."}}\n\n'
+
+    return StreamingResponse(
+        generate(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
+
+
+# ══════════════════════════════════════════════════════════════════════
+#  ENDPOINT 1c: Responder SOS Chat — STREAMING (SSE)
+# ══════════════════════════════════════════════════════════════════════
+@app.post("/api/responder/sos/stream", dependencies=[Depends(is_responder)])
+async def responder_sos_stream(body: dict = Body(...)):
+    message  = body.get("message", "")
+    lat      = body.get("lat", 18.5204)
+    lon      = body.get("lon", 73.8567)
+    battery  = body.get("battery", 100)
+    lang     = body.get("lang", "english")
+
+    incident_id = str(uuid.uuid4())[:8]
+
+    # Fetch live active incidents from Redis for high-impact context-aware answers
+    active_incidents = []
+    try:
+        redis = await get_redis()
+        raw = await redis.lrange("active_incidents", 0, 9)
+        active_incidents = [json.loads(i) for i in raw]
+    except Exception:
+        pass
+
+    incidents_text = ""
+    if active_incidents:
+        incidents_text = "\n".join([
+            f"- Incident ID {inc.get('id')}: {inc.get('message')} at Lat {inc.get('lat')}, Lon {inc.get('lon')} | Triage: {inc.get('triage_level')} | Status: {inc.get('status')}"
+            for inc in active_incidents if inc.get("status") == "ACTIVE" or inc.get("status") == "ASSIGNED"
+        ])
+    else:
+        incidents_text = "No active critical incidents currently recorded. Proceed with routine search and perimeter security."
+
+    # Build conversation context
+    conversation_history = body.get("history", [])
+    history_text = ""
+    if conversation_history:
+        history_text = "\n".join([
+            f"{'Responder' if h['role']=='user' else 'AURORA'}: {h['text']}"
+            for h in conversation_history[-6:]
+        ])
+
+    conversation_header = ("CONVERSATION SO FAR:\n" + history_text) if history_text else "FIRST CONTACT"
+
+    prompt = f"""You are AURORA CRPF Tactical Command AI — a mission-critical military disaster coordination expert deployed 
+during an active earthquake in Pune, India. 
+
+Your objective is to comprehensively direct a CRPF (Central Reserve Police Force) responder to reach high-impact areas and offer relevant, tactical help.
+
+CURRENT FIELD STATE (ACTIVE INCIDENTS IN SECTOR III):
+{incidents_text}
+
+RESPONDER PROFILE:
+- Current GPS Location: {lat}, {lon}
+- Battery Level: {battery}%
+- Language Option: {lang}
+- Mission Profile: High-impact search & rescue, path clearance, primary medical stabilization, and barrier containment.
+
+{conversation_header}
+
+CRITICAL INSTRUCTIONS FOR YOUR RESPONSE:
+1. **Directly Answer Their Query**: Read their input ("{message}") and answer it directly, tailored to exactly what they are asking. Do not repeat a fixed template.
+2. **Instruction-Type Tactical Tone**: Use crisp, direct, imperative commands (e.g., "PROCEED TO...", "ESTABLISH SECURITY...", "DEPLOY ASSETS..."). Do not use any conversational fluff or emotional reassurance (absolutely NO citizen-calming words like "I understand you are scared" or "Help is on the way").
+3. **Actionable Pune Geography**: Incorporate coordinate-based direction where appropriate. Advise on ingress routes avoiding chokepoints based on SB Road, Jhansi Rani Chowk, or general Pune sector paths.
+4. **Formatting**: Use clean Markdown. Keep it brief (under 150 words) for immediate, high-stress tactical reading.
+"""
+
+    async def generate():
+        # Send incident ID first
+        yield f'data: {{"type":"id","id":"{incident_id}"}}\n\n'
+
+        try:
+            full_response = ""
+            messages = [{"role": "user", "content": prompt}]
+            
+            # Try Primary (Online Hugging Face)
+            try:
+                from huggingface_hub import AsyncInferenceClient
+                hf_token = os.getenv("HUGGINGFACE_API_KEY")
+                hf_client = AsyncInferenceClient(token=hf_token)
+                model_name = os.getenv("GEMMA_FAST_MODEL", "google/gemma-4-31B-it")
+                
+                async for chunk in await hf_client.chat_completion(
+                    model=model_name,
+                    messages=messages,
+                    temperature=0.7,
+                    max_tokens=350,
+                    stream=True
+                ):
+                    if not chunk.choices:
+                        continue
+                    content = chunk.choices[0].delta.content
+                    if content:
+                        full_response += content
+                        safe = content.replace('\\', '\\\\').replace('"', '\\"').replace('\n', '\\n').replace('\r', '')
+                        yield f'data: {{"type":"chunk","text":"{safe}"}}\n\n'
+                        
+            except Exception as e:
+                logger.warning(f"🌐 HF Stream Failed: {e}. Switching to LOCAL FALLBACK.")
+                from openai import AsyncOpenAI
+                ollama_url = os.getenv("OLLAMA_URL", "http://host.docker.internal:11434/v1")
+                local_model = os.getenv("LOCAL_FALLBACK_MODEL", "gemma2:2b")
+                local_client = AsyncOpenAI(base_url=ollama_url, api_key="ollama")
+                
+                response_stream = await local_client.chat.completions.create(
+                    model=local_model,
+                    messages=messages,
+                    temperature=0.7,
+                    max_tokens=350,
+                    stream=True
+                )
+                async for chunk in response_stream:
+                    if not chunk.choices:
+                        continue
+                    content = chunk.choices[0].delta.content
+                    if content:
+                        full_response += content
+                        safe = content.replace('\\', '\\\\').replace('"', '\\"').replace('\n', '\\n').replace('\r', '')
+                        yield f'data: {{"type":"chunk","text":"{safe}"}}\n\n'
+
+            # Classify triage
+            msg_lower = message.lower()
+            if any(w in msg_lower for w in ["trapped", "buried", "unconscious",
+                                             "not breathing", "can't breathe", "crush", "collapse"]):
+                triage = "CRITICAL"
+            elif any(w in msg_lower for w in ["injured", "bleeding", "gas", "fire",
+                                               "stuck", "broken", "pain", "child fell"]):
+                triage = "HIGH"
+            else:
+                triage = "MODERATE"
+
+            # Save to Redis after streaming completes
+            incident = {
+                "id": incident_id, "message": f"[RESPONDER SOS]: {message}",
+                "lat": lat, "lon": lon,
+                "triage_level": triage,
+                "ai_response": full_response,
+                "timestamp": datetime.utcnow().isoformat(),
+                "status": "ACTIVE", "battery": battery, "lang": lang,
+                "reported_by": "responder"
+            }
+            try:
+                redis = await get_redis()
+                await redis.set(f"incident:{incident_id}", json.dumps(incident))
+                await redis.lpush("active_incidents", json.dumps(incident))
+                await redis.ltrim("active_incidents", 0, 99)
+                await redis.publish("broadcast:admin", json.dumps({
+                    "type": "new_incident", "incident": incident,
+                }))
+            except Exception:
+                pass
+
+            yield f'data: {{"type":"done","triage":"{triage}","id":"{incident_id}"}}\n\n'
+
+        except Exception as e:
+            logger.error(f"Streaming SOS failed: {e}")
+            yield f'data: {{"type":"error","message":"CRPF Tactical Command offline. Proceed with manual field orders."}}\n\n'
 
     return StreamingResponse(
         generate(),

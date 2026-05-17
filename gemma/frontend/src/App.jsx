@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect } from "react";
 import "./index.css";
 import DemoSimulator from "./pages/DemoSimulator";
 import ResponderDashboard from "./pages/ResponderDashboard";
+import ResponderSOS from "./pages/ResponderSOS";
 import CitizenApp from "./pages/CitizenApp";
 import LoginPage from "./pages/LoginPage";
 import SignUpPage from "./pages/SignUpPage";
@@ -63,7 +64,10 @@ export default function App() {
     
     if (user) {
       if (user.role === 'admin') items.push({ id: "admin", label: "Command Center" });
-      if (user.role === 'responder') items.push({ id: "responder", label: "Deployments" });
+      if (user.role === 'responder') {
+        items.push({ id: "responder", label: "Deployments" });
+        items.push({ id: "responder_sos", label: "Tactical SOS" });
+      }
       if (user.role === 'citizen') items.push({ id: "citizen", label: "SOS Portal" });
       items.push({ id: "logout", label: "Logout", action: handleLogout });
     } else {
@@ -111,6 +115,7 @@ export default function App() {
           {page === "demo" && <DemoSimulator onSimulationComplete={(data) => { setLatestResult(data); setPage("admin"); }} />}
           {page === "admin" && user?.role === 'admin' && <CommandCenter />}
           {page === "responder" && user?.role === 'responder' && <ResponderDashboard pipelineResult={latestResult} />}
+          {page === "responder_sos" && user?.role === 'responder' && <ResponderSOS />}
           {page === "citizen" && <CitizenApp />}
           {page === "login" && <LoginPage onLogin={handleLogin} setPage={setPage} />}
           {page === "signup" && <SignUpPage setPage={setPage} />}

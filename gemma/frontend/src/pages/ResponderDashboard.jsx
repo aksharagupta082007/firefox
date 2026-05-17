@@ -15,6 +15,26 @@ export default function ResponderDashboard() {
   const token = localStorage.getItem("aurora_token");
   const headers = { Authorization: `Bearer ${token}`, "Content-Type": "application/json" };
 
+  const renderFormattedContent = (text) => {
+    if (!text) return null;
+    const lines = text.split("\n");
+    return lines.map((line, lineIdx) => {
+      const parts = line.split("**");
+      const formattedLine = parts.map((part, partIdx) => {
+        if (partIdx % 2 === 1) {
+          return <strong key={partIdx} style={{ color: '#ea580c', fontWeight: 'bold' }}>{part}</strong>;
+        }
+        return part;
+      });
+
+      return (
+        <div key={lineIdx} style={{ minHeight: '1.2em' }}>
+          {formattedLine}
+        </div>
+      );
+    });
+  };
+
   const [dispatches, setDispatches] = useState([]);
   const [wsStatus, setWsStatus] = useState("connecting");
   const [currentLocation] = useState({ lat: 18.5204, lon: 73.8567 });
@@ -123,9 +143,9 @@ export default function ResponderDashboard() {
                       <span style={{ color: "#6b7280", fontSize: "11px" }}>{d.incident_id}</span>
                     </div>
 
-                    <p style={{ color: "#d1d5db", fontSize: "13px", margin: "8px 0", lineHeight: 1.5 }}>
-                      {d.message || "Dispatch approved. Move to coordinates immediately."}
-                    </p>
+                    <div style={{ color: "#d1d5db", fontSize: "13px", margin: "8px 0", lineHeight: 1.5 }}>
+                      {renderFormattedContent(d.message) || "Dispatch approved. Move to coordinates immediately."}
+                    </div>
 
                     <div style={{ display: "flex", gap: "8px", marginTop: "10px", flexWrap: "wrap" }}>
                       <button onClick={() => fetchBriefing(d.incident_id)} style={{
@@ -222,7 +242,7 @@ export default function ResponderDashboard() {
                   {briefing.situation_summary && (
                     <div style={{ marginBottom: "20px" }}>
                       <h4 style={{ color: "#9ca3af", fontSize: "11px", textTransform: "uppercase", marginBottom: "6px" }}>Situation</h4>
-                      <p style={{ color: "#e5e7eb", fontSize: "14px", lineHeight: 1.6 }}>{briefing.situation_summary}</p>
+                      <div style={{ color: "#e5e7eb", fontSize: "14px", lineHeight: 1.6 }}>{renderFormattedContent(briefing.situation_summary)}</div>
                     </div>
                   )}
 
@@ -233,9 +253,9 @@ export default function ResponderDashboard() {
                       borderRadius: "10px", padding: "14px", marginBottom: "20px",
                     }}>
                       <h4 style={{ color: "#fde68a", fontSize: "13px", margin: "0 0 6px 0" }}>⏱️ First 60 Seconds</h4>
-                      <p style={{ color: "#fef3c7", fontSize: "14px", lineHeight: 1.6, margin: 0 }}>
-                        {briefing.immediate_actions.first_60_seconds}
-                      </p>
+                      <div style={{ color: "#fef3c7", fontSize: "14px", lineHeight: 1.6, margin: 0 }}>
+                        {renderFormattedContent(briefing.immediate_actions.first_60_seconds)}
+                      </div>
                     </div>
                   )}
 
