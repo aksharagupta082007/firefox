@@ -15,8 +15,7 @@ function Navbar({ page, setPage, isAlert, navItems }) {
   return (
     <nav className={`navbar ${scrolled ? "scrolled" : ""}`}>
       <a className="navbar-brand" href="#" onClick={(e) => { e.preventDefault(); setPage("demo"); }}>
-        <div className="logo"></div>
-        <h1>AURORA TECH</h1>
+        <img src="/AURORAtech.svg" alt="AURORA TECH" style={{ height: "36px", width: "auto", display: "block" }} />
       </a>
 
       <button className="hamburger" onClick={() => setMenuOpen(!menuOpen)}>

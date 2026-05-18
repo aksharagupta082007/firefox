@@ -105,96 +105,93 @@ export default function ResponderDashboard() {
 
   return (
     <div className="responder-dashboard glass-card">
-      <header className="rd-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "10px" }}>
-        <h2 className="gradient-text" style={{ margin: 0 }}>Responder Tactical Dashboard</h2>
+      <header className="rd-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "10px", marginBottom: "24px" }}>
+        <h2 className="gradient-text dashboard-title" style={{ margin: 0 }}>Responder Tactical Dashboard</h2>
         <div className={`status-pill ${wsStatus === 'online' ? 'online' : 'alert'}`}>
           {wsStatus === 'online' ? '● System Connected' : '○ Connection Lost'}
         </div>
       </header>
 
-      <div className="rd-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px", marginTop: "16px" }}>
+      {/* ══ MAP — Full Width at Top ══ */}
+      <div style={{ borderRadius: "12px", overflow: "hidden", marginBottom: "28px", border: "1px solid rgba(255,255,255,0.06)" }}>
+        <AuroraMap
+          data={{
+            epicenter: { lat: currentLocation.lat, lon: currentLocation.lon },
+            sosReports: dispatches.map(d => ({
+              lat: d.lat || 18.53,
+              lon: d.lon || 73.86,
+              message: d.message || "Dispatch Target",
+              severity: d.triage_level === "CRITICAL" ? 5 : d.triage_level === "HIGH" ? 4 : 3,
+            })),
+          }}
+          height={340}
+        />
+      </div>
+
+      {/* ══ 2-Column: Dispatches | Unit Status ══ */}
+      <div className="dash-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px" }}>
+
         {/* ── Left: Dispatches ── */}
         <div>
-          <div className="active-dispatches">
-            <h3 style={{ marginBottom: "12px" }}>Active Dispatches</h3>
-            {dispatches.length === 0 ? (
-              <p className="text-muted" style={{ textAlign: "center", padding: "40px 0" }}>
-                Waiting for deployment orders...
-              </p>
-            ) : (
-              dispatches.map(d => {
-                const level = (d.triage_level || "HIGH").toUpperCase();
-                const color = TRIAGE_COLORS[level] || TRIAGE_COLORS.HIGH;
-
-                return (
-                  <div key={d.incident_id} style={{
-                    background: "rgba(255,255,255,0.03)", borderRadius: "10px",
-                    padding: "14px", marginBottom: "12px",
-                    borderLeft: `4px solid ${color}`,
-                  }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
-                      <span style={{
-                        background: color, color: "white", padding: "2px 10px",
-                        borderRadius: "12px", fontSize: "11px", fontWeight: "bold",
-                        animation: level === "CRITICAL" ? "pulse 1s infinite" : "none",
-                      }}>
-                        DISPATCH — {level}
-                      </span>
-                      <span style={{ color: "#6b7280", fontSize: "11px" }}>{d.incident_id}</span>
-                    </div>
-
-                    <div style={{ color: "#d1d5db", fontSize: "13px", margin: "8px 0", lineHeight: 1.5 }}>
-                      {renderFormattedContent(d.message) || "Dispatch approved. Move to coordinates immediately."}
-                    </div>
-
-                    <div style={{ display: "flex", gap: "8px", marginTop: "10px", flexWrap: "wrap" }}>
-                      <button onClick={() => fetchBriefing(d.incident_id)} style={{
-                        flex: 1, padding: "8px", background: "#7c3aed", color: "white",
-                        border: "none", borderRadius: "6px", fontSize: "13px",
-                        fontWeight: "bold", cursor: "pointer",
-                      }}>
-                        Get Full Briefing
-                      </button>
-                      <button onClick={() => handleComplete(d.incident_id)} style={{
-                        flex: 1, padding: "8px", background: "#16a34a", color: "white",
-                        border: "none", borderRadius: "6px", fontSize: "13px",
-                        fontWeight: "bold", cursor: "pointer",
-                      }}>
-                        ✅ Mark Arrived
-                      </button>
-                    </div>
-                  </div>
-                );
-              })
-            )}
-          </div>
-
-          <div className="info-box" style={{ marginTop: "16px", padding: "14px" }}>
-            <h3>Unit Status</h3>
-            <p style={{ color: "#9ca3af", fontSize: "13px" }}>ID: RES_PUNE_08</p>
-            <p style={{ color: "#9ca3af", fontSize: "13px" }}>Specialty: Medical / Search & Rescue</p>
-            <p style={{ color: dispatches.length > 0 ? "#f87171" : "#4ade80", fontSize: "13px", fontWeight: "bold" }}>
-              Status: {dispatches.length > 0 ? 'EN ROUTE' : 'STANDBY'}
+          <h3 style={{ fontSize: "13px", color: "#a7a7a7", textTransform: "uppercase", letterSpacing: "1px", marginBottom: "16px", fontFamily: "Inter, sans-serif", fontWeight: 600 }}>
+            Active Dispatches
+          </h3>
+          {dispatches.length === 0 ? (
+            <p className="text-muted" style={{ textAlign: "center", padding: "40px 0", color: "#4b5563", fontSize: "14px" }}>
+              Waiting for deployment orders...
             </p>
-          </div>
+          ) : (
+            dispatches.map(d => {
+              const level = (d.triage_level || "HIGH").toUpperCase();
+              const color = TRIAGE_COLORS[level] || TRIAGE_COLORS.HIGH;
+              return (
+                <div key={d.incident_id} style={{ background: "rgba(255,255,255,0.03)", borderRadius: "12px", padding: "16px", marginBottom: "14px", borderLeft: `4px solid ${color}` }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
+                    <span style={{ background: `${color}22`, color, padding: "3px 10px", borderRadius: "12px", fontSize: "11px", fontWeight: "700" }}>
+                      {level}
+                    </span>
+                    <span style={{ color: "#4b5563", fontSize: "11px" }}>{d.incident_id}</span>
+                  </div>
+                  <div style={{ color: "#d1d5db", fontSize: "14px", margin: "10px 0", lineHeight: 1.6 }}>
+                    {renderFormattedContent(d.message) || "Dispatch approved. Move to coordinates immediately."}
+                  </div>
+                  <div style={{ display: "flex", gap: "10px", marginTop: "12px" }}>
+                    <button onClick={() => fetchBriefing(d.incident_id)} style={{ flex: 1, padding: "9px", background: "rgba(255,255,255,0.07)", color: "#f1f5f9", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "8px", fontSize: "13px", fontFamily: "Inter, sans-serif", cursor: "pointer" }}>
+                      Get Full Briefing
+                    </button>
+                    <button onClick={() => handleComplete(d.incident_id)} style={{ flex: 1, padding: "9px", background: "rgba(74,222,128,0.1)", color: "#4ade80", border: "1px solid rgba(74,222,128,0.2)", borderRadius: "8px", fontSize: "13px", fontFamily: "Inter, sans-serif", cursor: "pointer" }}>
+                      ✓ Mark Arrived
+                    </button>
+                  </div>
+                </div>
+              );
+            })
+          )}
         </div>
 
-        {/* ── Right: Map ── */}
-        <div style={{ minHeight: "400px" }}>
-          <AuroraMap
-            data={{
-              epicenter: { lat: currentLocation.lat, lon: currentLocation.lon },
-              sosReports: dispatches.map(d => ({
-                lat: d.lat || 18.53,
-                lon: d.lon || 73.86,
-                message: d.message || "Dispatch Target",
-                severity: d.triage_level === "CRITICAL" ? 5 : d.triage_level === "HIGH" ? 4 : 3,
-              })),
-            }}
-            height={400}
-          />
+        {/* ── Right: Unit Status ── */}
+        <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+          <h3 style={{ fontSize: "13px", color: "#a7a7a7", textTransform: "uppercase", letterSpacing: "1px", marginBottom: "0", fontFamily: "Inter, sans-serif", fontWeight: 600 }}>
+            Unit Status
+          </h3>
+          <div style={{ background: "rgba(255,255,255,0.03)", borderRadius: "12px", padding: "20px", border: "1px solid rgba(255,255,255,0.05)" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px" }}>
+              {[
+                ["Unit ID", "RES_PUNE_08"],
+                ["Specialty", "Medical / SAR"],
+                ["Status", dispatches.length > 0 ? "EN ROUTE" : "STANDBY"],
+                ["Location", `${currentLocation.lat.toFixed(4)}, ${currentLocation.lon.toFixed(4)}`],
+              ].map(([label, value]) => (
+                <div key={label} style={{ background: "rgba(255,255,255,0.02)", borderRadius: "8px", padding: "12px" }}>
+                  <div style={{ color: "#646464", fontSize: "11px", marginBottom: "4px", fontFamily: "Inter, sans-serif", textTransform: "uppercase", letterSpacing: "0.5px" }}>{label}</div>
+                  <div style={{ color: label === "Status" ? (dispatches.length > 0 ? "#f87171" : "#4ade80") : "#f1f5f9", fontSize: "14px", fontWeight: "600" }}>{value}</div>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
+
 
       {/* ══════════════════════════════════════════════════════════ */}
       {/*  BRIEFING MODAL                                          */}

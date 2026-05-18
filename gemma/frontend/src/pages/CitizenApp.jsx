@@ -197,9 +197,9 @@ export default function CitizenApp() {
   };
 
   return (
-    <div className="citizen-app glass-card" style={{ maxWidth: 800, margin: "0 auto" }}>
+    <div className="citizen-app glass-card" style={{ maxWidth: "100%", margin: "0 0" }}>
       <header className="citizen-header">
-        <h2 className="gradient-text">Citizen SOS Portal</h2>
+        <h2 className="gradient-text dashboard-title">Citizen SOS Portal</h2>
       </header>
 
       {/* Battery Warning */}

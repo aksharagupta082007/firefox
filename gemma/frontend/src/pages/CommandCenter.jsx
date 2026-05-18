@@ -160,238 +160,241 @@ export default function CommandCenter() {
 
   return (
     <div className="command-center glass-card">
+
       {/* ── Header ── */}
-      <header style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px", marginBottom: "16px" }}>
+      <header style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px", marginBottom: "24px" }}>
         <div>
-          <h2 className="gradient-text" style={{ margin: 0, fontSize: "22px" }}>Command Center</h2>
+          <h2 className="gradient-text dashboard-title" style={{ margin: 0, fontSize: "22px" }}>Command Center</h2>
           <div style={{ display: "flex", gap: "8px", marginTop: "6px", alignItems: "center", flexWrap: "wrap" }}>
             {cs.phase && (
-              <span style={{ background: "rgba(124,58,237,0.2)", color: "#c4b5fd", padding: "3px 12px", borderRadius: "14px", fontSize: "12px", fontWeight: "bold" }}>
+              <span style={{ background: "rgba(255,255,255,0.06)", color: "#d1d5db", padding: "3px 12px", borderRadius: "14px", fontSize: "12px" }}>
                 {PHASE_LABELS[cs.phase] || cs.phase}
               </span>
             )}
             {cs.overall_severity && (
-              <span style={{ background: `${SEVERITY_COLORS[cs.overall_severity] || "#ca8a04"}33`, color: SEVERITY_COLORS[cs.overall_severity] || "#ca8a04", padding: "3px 12px", borderRadius: "14px", fontSize: "12px", fontWeight: "bold" }}>
+              <span style={{ background: "rgba(255,255,255,0.05)", color: "#a7a7a7", padding: "3px 12px", borderRadius: "14px", fontSize: "12px" }}>
                 {cs.overall_severity}
               </span>
             )}
-            <span style={{ color: "#6b7280", fontSize: "11px" }}>
+            <span style={{ color: "#646464", fontSize: "11px" }}>
               Active: {incidents.length} • Updated {secondsAgo}s ago
             </span>
           </div>
         </div>
         <button onClick={runSimulation} disabled={simRunning} style={{
-          background: simRunning ? '#6b21a8' : '#7c3aed', color: 'white',
-          padding: '10px 20px', borderRadius: '8px', border: 'none',
-          cursor: simRunning ? 'wait' : 'pointer', fontWeight: 'bold', fontSize: '14px',
+          background: simRunning ? '#374151' : 'rgba(255,255,255,0.08)', color: simRunning ? '#9ca3af' : '#f1f5f9',
+          padding: '10px 20px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)',
+          cursor: simRunning ? 'wait' : 'pointer', fontWeight: '600', fontSize: '14px', fontFamily: 'Inter, sans-serif',
         }}>
-          {simRunning ? '⏳ Running...' : '🎮 Run Simulation'}
+          {simRunning ? 'Running...' : 'Run Simulation'}
         </button>
       </header>
 
       {/* Headline */}
       {cs.headline && (
-        <div style={{ background: "rgba(255,255,255,0.03)", borderRadius: "10px", padding: "12px 18px", marginBottom: "16px", borderLeft: "4px solid #7c3aed" }}>
-          <span style={{ color: "#e5e7eb", fontSize: "16px", fontWeight: "bold" }}>{cs.headline}</span>
+        <div style={{ background: "rgba(255,255,255,0.03)", borderRadius: "10px", padding: "12px 18px", marginBottom: "20px", borderLeft: "3px solid rgba(255,255,255,0.15)" }}>
+          <span style={{ color: "#e5e7eb", fontSize: "15px" }}>{cs.headline}</span>
         </div>
       )}
 
       {/* Sim Results */}
       {simResult?.simulation_complete && (
-        <div style={{ background: "rgba(124,58,237,0.08)", border: "1px solid rgba(124,58,237,0.2)", borderRadius: "10px", padding: "14px", marginBottom: "16px" }}>
-          <strong style={{ color: "#c4b5fd", fontSize: "13px" }}>Simulation: </strong>
+        <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "10px", padding: "12px", marginBottom: "20px" }}>
+          <strong style={{ color: "#a7a7a7", fontSize: "12px" }}>Simulation: </strong>
           <span style={{ color: "#d1d5db", fontSize: "13px" }}>
             {simResult.incidents_processed} incidents — CRIT: {simResult.triage_summary?.CRITICAL || 0}, HIGH: {simResult.triage_summary?.HIGH || 0}, MOD: {simResult.triage_summary?.MODERATE || 0}
           </span>
         </div>
       )}
 
-      {/* ══ 3-Column Grid ══ */}
-      <div style={{ display: "grid", gridTemplateColumns: "300px 1fr 320px", gap: "16px" }}>
+      {/* ══ MAP — Full Width at Top ══ */}
+      <div style={{ borderRadius: "12px", overflow: "hidden", marginBottom: "28px", border: "1px solid rgba(255,255,255,0.06)" }}>
+        <AuroraMap
+          data={{
+            epicenter: { lat: 18.5204, lon: 73.8567 },
+            sosReports: incidents.map(i => ({
+              lat: i.lat || 18.5204,
+              lon: i.lon || 73.8567,
+              message: i.message || '',
+              severity: i.triage_level === 'CRITICAL' ? 5 : i.triage_level === 'HIGH' ? 4 : 3
+            }))
+          }}
+          height={320}
+        />
+      </div>
 
-        {/* ═══ LEFT: Incidents ═══ */}
-        <div style={{ maxHeight: "700px", overflowY: "auto" }}>
-          <h3 style={{ color: "#9ca3af", fontSize: "12px", textTransform: "uppercase", marginBottom: "10px" }}>Live Incidents ({incidents.length})</h3>
-          {sorted.length === 0 && <p style={{ color: "#4b5563", textAlign: "center", padding: "30px 0", fontSize: "13px" }}>No incidents. Run simulation.</p>}
-          {sorted.map((inc, idx) => {
-            const level = getLevel(inc);
-            const id = inc.id || inc.incident_id || `i-${idx}`;
-            const color = TRIAGE_COLORS[level] || TRIAGE_COLORS.MODERATE;
-            const status = actionStatus[id];
-            return (
-              <div key={id} style={{ background: "rgba(255,255,255,0.03)", borderRadius: "8px", padding: "10px", marginBottom: "8px", borderLeft: `3px solid ${color}` }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4px" }}>
-                  <span style={{ background: color, color: "white", padding: "1px 8px", borderRadius: "10px", fontSize: "10px", fontWeight: "bold", animation: level === "CRITICAL" ? "pulse 1s infinite" : "none" }}>
-                    {level}
-                  </span>
-                  <span style={{ color: "#4b5563", fontSize: "10px" }}>{inc.area || id}</span>
+      {/* ══ 2-Column Grid: Incidents+Chat | Intelligence+Resources ══ */}
+      <div className="dash-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px" }}>
+
+        {/* ═══ LEFT: Incidents + Gemma Chat ═══ */}
+        <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+
+          {/* Incidents */}
+          <div>
+            <h3 style={{ color: "#a7a7a7", fontSize: "13px", textTransform: "uppercase", letterSpacing: "1px", marginBottom: "14px", fontFamily: "Inter, sans-serif", fontWeight: 600 }}>
+              Live Incidents ({incidents.length})
+            </h3>
+            <div style={{ maxHeight: "340px", overflowY: "auto", display: "flex", flexDirection: "column", gap: "10px" }}>
+              {sorted.length === 0 && <p style={{ color: "#4b5563", textAlign: "center", padding: "30px 0", fontSize: "13px" }}>No incidents. Run simulation.</p>}
+              {sorted.map((inc, idx) => {
+                const level = getLevel(inc);
+                const id = inc.id || inc.incident_id || `i-${idx}`;
+                const color = TRIAGE_COLORS[level] || TRIAGE_COLORS.MODERATE;
+                const status = actionStatus[id];
+                return (
+                  <div key={id} style={{ background: "rgba(255,255,255,0.03)", borderRadius: "10px", padding: "14px", borderLeft: `3px solid ${color}` }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px" }}>
+                      <span style={{ background: `${color}22`, color, padding: "2px 10px", borderRadius: "10px", fontSize: "11px", fontWeight: "700" }}>
+                        {level}
+                      </span>
+                      <span style={{ color: "#4b5563", fontSize: "11px" }}>{inc.area || id}</span>
+                    </div>
+                    <p style={{ color: "#d1d5db", fontSize: "13px", margin: "6px 0 10px", lineHeight: 1.5, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
+                      {inc.message || inc.raw_message || "—"}
+                    </p>
+                    {status ? (
+                      <div style={{ fontSize: "12px", fontWeight: "bold", textAlign: "center", padding: "6px", borderRadius: "6px", background: status === "DISPATCHED" ? "rgba(22,163,74,0.12)" : "rgba(220,38,38,0.12)", color: status === "DISPATCHED" ? "#4ade80" : "#fca5a5" }}>
+                        {status === "DISPATCHED" ? "✓ DISPATCHED" : "✕ REJECTED"}
+                      </div>
+                    ) : (
+                      <div style={{ display: "flex", gap: "8px" }}>
+                        <button onClick={() => handleApprove(id)} style={{ flex: 1, padding: "7px", background: "rgba(22,163,74,0.12)", color: "#4ade80", border: "1px solid rgba(22,163,74,0.2)", borderRadius: "6px", fontSize: "12px", fontFamily: "Inter, sans-serif", cursor: "pointer" }}>Dispatch</button>
+                        <button onClick={() => handleReject(id)} style={{ flex: 1, padding: "7px", background: "rgba(220,38,38,0.12)", color: "#fca5a5", border: "1px solid rgba(220,38,38,0.2)", borderRadius: "6px", fontSize: "12px", fontFamily: "Inter, sans-serif", cursor: "pointer" }}>Reject</button>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Gemma Chat */}
+          <div style={{ background: "rgba(0,0,0,0.15)", borderRadius: "12px", border: "1px solid rgba(255,255,255,0.05)", display: "flex", flexDirection: "column" }}>
+            <div style={{ padding: "14px 18px", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
+              <h3 style={{ margin: 0, fontSize: "13px", color: "#a7a7a7", fontFamily: "Inter, sans-serif", fontWeight: 600, textTransform: "uppercase", letterSpacing: "1px" }}>Gemma Advisor</h3>
+            </div>
+            <div style={{ padding: "8px 12px", display: "flex", flexWrap: "wrap", gap: "6px" }}>
+              {EXAMPLE_QUESTIONS.map((q, i) => (
+                <button key={i} onClick={() => sendChat(q)} style={{ background: "rgba(255,255,255,0.05)", color: "#a7a7a7", border: "1px solid rgba(255,255,255,0.07)", borderRadius: "12px", padding: "4px 10px", fontSize: "11px", fontFamily: "Inter, sans-serif", cursor: "pointer" }}>{q}</button>
+              ))}
+            </div>
+            <div style={{ flex: 1, overflowY: "auto", padding: "12px 14px", display: "flex", flexDirection: "column", gap: "8px", maxHeight: "260px" }}>
+              {chatMessages.length === 0 && <p style={{ color: "#4b5563", fontSize: "12px", textAlign: "center", marginTop: "20px" }}>Ask Gemma...</p>}
+              {chatMessages.map((m, i) => (
+                <div key={i} style={{ alignSelf: m.role === "user" ? "flex-end" : "flex-start", maxWidth: "90%", padding: "10px 14px", borderRadius: "10px", background: m.role === "user" ? "rgba(255,255,255,0.08)" : "rgba(255,255,255,0.04)", color: m.role === "user" ? "#f1f5f9" : "#d1d5db", fontSize: "13px", lineHeight: 1.5, border: "1px solid rgba(255,255,255,0.07)" }}>
+                  {m.content}
+                  {m.model && <div style={{ fontSize: "10px", color: "#4b5563", marginTop: "4px" }}>— {m.model}</div>}
                 </div>
-                <p style={{ color: "#d1d5db", fontSize: "12px", margin: "4px 0", lineHeight: 1.4, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
-                  {inc.message || inc.raw_message || "—"}
-                </p>
-                {status ? (
-                  <div style={{ fontSize: "11px", fontWeight: "bold", textAlign: "center", padding: "4px", borderRadius: "4px", marginTop: "6px", background: status === "DISPATCHED" ? "rgba(22,163,74,0.15)" : "rgba(220,38,38,0.15)", color: status === "DISPATCHED" ? "#4ade80" : "#fca5a5" }}>
-                    {status === "DISPATCHED" ? "✅ DISPATCHED" : "❌ REJECTED"}
-                  </div>
-                ) : (
-                  <div style={{ display: "flex", gap: "6px", marginTop: "6px" }}>
-                    <button onClick={() => handleApprove(id)} style={{ flex: 1, padding: "4px", background: "#16a34a", color: "white", border: "none", borderRadius: "4px", fontSize: "11px", fontWeight: "bold", cursor: "pointer" }}>✅ Dispatch</button>
-                    <button onClick={() => handleReject(id)} style={{ flex: 1, padding: "4px", background: "#dc2626", color: "white", border: "none", borderRadius: "4px", fontSize: "11px", fontWeight: "bold", cursor: "pointer" }}>❌ Reject</button>
-                  </div>
-                )}
-              </div>
-            );
-          })}
+              ))}
+              {chatLoading && <div style={{ alignSelf: "flex-start", padding: "10px 14px", borderRadius: "10px", background: "rgba(255,255,255,0.04)", color: "#a7a7a7", fontSize: "13px" }}>Thinking...</div>}
+              <div ref={chatEndRef} />
+            </div>
+            <div style={{ padding: "10px 12px", borderTop: "1px solid rgba(255,255,255,0.05)", display: "flex", gap: "8px" }}>
+              <input value={chatInput} onChange={e => setChatInput(e.target.value)} onKeyDown={e => e.key === "Enter" && sendChat()}
+                placeholder="Ask Gemma..." style={{ flex: 1, padding: "9px 12px", borderRadius: "8px", background: "rgba(255,255,255,0.04)", color: "#f1f5f9", border: "1px solid rgba(255,255,255,0.08)", fontSize: "13px", fontFamily: "Inter, sans-serif", outline: "none" }} />
+              <button onClick={() => sendChat()} disabled={chatLoading} style={{ padding: "9px 16px", background: "rgba(255,255,255,0.08)", color: "#f1f5f9", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "8px", cursor: "pointer", fontFamily: "Inter, sans-serif", fontSize: "13px" }}>Send</button>
+            </div>
+          </div>
         </div>
 
-        {/* ═══ MIDDLE: Intelligence Report ═══ */}
-        <div style={{ maxHeight: "700px", overflowY: "auto" }}>
+        {/* ═══ RIGHT: Intelligence + Resources ═══ */}
+        <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+
+          {/* Efficiency + Lives */}
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "12px" }}>
+            <div style={{ background: "rgba(255,255,255,0.03)", borderRadius: "10px", padding: "16px", textAlign: "center", border: "1px solid rgba(255,255,255,0.05)" }}>
+              <div style={{ fontSize: "28px", fontWeight: "700", color: "#f1f5f9" }}>{summary?.efficiency_score ?? "—"}</div>
+              <div style={{ fontSize: "11px", color: "#646464", marginTop: "4px", fontFamily: "Inter, sans-serif", textTransform: "uppercase", letterSpacing: "0.5px" }}>Efficiency</div>
+            </div>
+            <div style={{ background: "rgba(255,255,255,0.03)", borderRadius: "10px", padding: "16px", textAlign: "center", border: "1px solid rgba(255,255,255,0.05)" }}>
+              <div style={{ fontSize: "28px", fontWeight: "700", color: "#f87171" }}>{summary?.lives_at_risk ?? "—"}</div>
+              <div style={{ fontSize: "11px", color: "#646464", marginTop: "4px", fontFamily: "Inter, sans-serif", textTransform: "uppercase", letterSpacing: "0.5px" }}>At Risk</div>
+            </div>
+            <div style={{ background: "rgba(255,255,255,0.03)", borderRadius: "10px", padding: "16px", textAlign: "center", border: "1px solid rgba(255,255,255,0.05)" }}>
+              <div style={{ fontSize: "28px", fontWeight: "700", color: "#4ade80" }}>{summary?.lives_secured ?? "—"}</div>
+              <div style={{ fontSize: "11px", color: "#646464", marginTop: "4px", fontFamily: "Inter, sans-serif", textTransform: "uppercase", letterSpacing: "0.5px" }}>Secured</div>
+            </div>
+          </div>
+
           {/* Commander Briefing */}
           {summary?.commander_briefing && (
-            <div style={{ background: "rgba(255,255,255,0.04)", borderRadius: "10px", padding: "16px", marginBottom: "16px" }}>
-              <h4 style={{ color: "#9ca3af", fontSize: "11px", textTransform: "uppercase", marginBottom: "8px" }}>Commander Briefing</h4>
-              <p style={{ color: "#f3f4f6", fontSize: "14px", lineHeight: 1.7, margin: 0 }}>{summary.commander_briefing}</p>
+            <div style={{ background: "rgba(255,255,255,0.03)", borderRadius: "12px", padding: "18px", border: "1px solid rgba(255,255,255,0.06)" }}>
+              <h3 style={{ color: "#a7a7a7", fontSize: "12px", textTransform: "uppercase", marginBottom: "10px", fontFamily: "Inter, sans-serif", fontWeight: 600, letterSpacing: "1px" }}>Commander Briefing</h3>
+              <p style={{ color: "#e5e7eb", fontSize: "14px", lineHeight: 1.7, margin: 0 }}>{summary.commander_briefing}</p>
             </div>
           )}
 
           {/* Zone Analysis */}
           {summary?.zone_analysis?.length > 0 && (
-            <div style={{ marginBottom: "16px" }}>
-              <h4 style={{ color: "#9ca3af", fontSize: "11px", textTransform: "uppercase", marginBottom: "8px" }}>Zone Analysis</h4>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
+            <div>
+              <h3 style={{ color: "#a7a7a7", fontSize: "12px", textTransform: "uppercase", marginBottom: "12px", fontFamily: "Inter, sans-serif", fontWeight: 600, letterSpacing: "1px" }}>Zone Analysis</h3>
+              <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
                 {summary.zone_analysis.map((z, i) => (
-                  <div key={i} style={{ background: "rgba(255,255,255,0.03)", borderRadius: "8px", padding: "10px", borderLeft: `3px solid ${TRIAGE_COLORS[z.severity] || "#ca8a04"}` }}>
+                  <div key={i} style={{ background: "rgba(255,255,255,0.03)", borderRadius: "8px", padding: "12px 14px", borderLeft: `3px solid ${TRIAGE_COLORS[z.severity] || "#646464"}` }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4px" }}>
                       <strong style={{ color: "#e5e7eb", fontSize: "13px" }}>{z.zone_name}</strong>
-                      <span style={{ background: TRIAGE_COLORS[z.severity] || "#ca8a04", color: "white", padding: "1px 6px", borderRadius: "8px", fontSize: "9px", fontWeight: "bold" }}>{z.severity}</span>
+                      <span style={{ color: "#a7a7a7", fontSize: "11px" }}>{z.severity}</span>
                     </div>
-                    <div style={{ color: "#9ca3af", fontSize: "11px" }}>{z.primary_threat}</div>
-                    <div style={{ color: "#6b7280", fontSize: "10px", marginTop: "4px" }}>
-                      {z.people_at_risk && `${z.people_at_risk} at risk`}{z.incident_count ? ` • ${z.incident_count} incidents` : ""}
-                    </div>
-                    {z.gemma_assessment && <div style={{ color: "#a78bfa", fontSize: "10px", fontStyle: "italic", marginTop: "4px" }}>{z.gemma_assessment}</div>}
+                    <div style={{ color: "#9ca3af", fontSize: "12px" }}>{z.primary_threat}</div>
+                    {z.gemma_assessment && <div style={{ color: "#646464", fontSize: "11px", marginTop: "4px", fontStyle: "italic" }}>{z.gemma_assessment}</div>}
                   </div>
                 ))}
               </div>
             </div>
           )}
 
-          {/* Critical Decisions */}
-          {summary?.critical_decisions?.length > 0 && (
-            <div style={{ marginBottom: "16px" }}>
-              <h4 style={{ color: "#9ca3af", fontSize: "11px", textTransform: "uppercase", marginBottom: "8px" }}>Critical Decisions</h4>
-              {summary.critical_decisions.map((d, i) => (
-                <div key={i} style={{ background: "rgba(255,255,255,0.03)", borderRadius: "8px", padding: "12px", marginBottom: "8px", borderLeft: `3px solid ${URGENCY_COLORS[d.urgency] || "#ca8a04"}` }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "6px" }}>
-                    <span style={{ color: "#e5e7eb", fontSize: "13px", fontWeight: "bold" }}>{d.decision}</span>
-                    <span style={{ color: URGENCY_COLORS[d.urgency] || "#ca8a04", fontSize: "10px", fontWeight: "bold" }}>{d.urgency}</span>
-                  </div>
-                  <div style={{ display: "flex", gap: "6px", marginBottom: "6px" }}>
-                    {d.options?.map((opt, j) => (
-                      <button key={j} onClick={() => sendChat(`Commander chose: "${opt}" for decision "${d.decision}". Analyze the consequences.`)}
-                        style={{ flex: 1, padding: "6px", background: "#374151", color: "#d1d5db", border: "1px solid #4b5563", borderRadius: "6px", fontSize: "11px", cursor: "pointer" }}>
-                        {opt}
-                      </button>
-                    ))}
-                  </div>
-                  {d.gemma_recommendation && <div style={{ color: "#a78bfa", fontSize: "11px", fontStyle: "italic" }}>Gemma: {d.gemma_recommendation}</div>}
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* Timeline */}
-          {(tf.next_30_min || tf.next_2_hours || tf.resolution_estimate) && (
-            <div style={{ marginBottom: "16px" }}>
-              <h4 style={{ color: "#9ca3af", fontSize: "11px", textTransform: "uppercase", marginBottom: "8px" }}>Timeline Forecast</h4>
-              {[
-                ["Next 30 min", tf.next_30_min, "#f87171"],
-                ["Next 2 hours", tf.next_2_hours, "#fbbf24"],
-                ["Resolution", tf.resolution_estimate, "#4ade80"],
-              ].map(([label, text, color], i) => text && (
-                <div key={i} style={{ display: "flex", gap: "10px", marginBottom: "6px", alignItems: "flex-start" }}>
-                  <span style={{ color, fontSize: "11px", fontWeight: "bold", minWidth: "80px" }}>{label}</span>
-                  <span style={{ color: "#d1d5db", fontSize: "12px", lineHeight: 1.4 }}>{text}</span>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* Map */}
-          <div style={{ borderRadius: "10px", overflow: "hidden", minHeight: "250px" }}>
-            <AuroraMap points={incidents.map(i => ({ lat: i.lat, lon: i.lon, label: getLevel(i) }))} zoom={12} />
-          </div>
-        </div>
-
-        {/* ═══ RIGHT: Resources + Chat ═══ */}
-        <div style={{ display: "flex", flexDirection: "column", gap: "12px", maxHeight: "700px" }}>
-
-          {/* Efficiency Score */}
-          <div style={{ background: "rgba(255,255,255,0.03)", borderRadius: "10px", padding: "16px", textAlign: "center" }}>
-            <div style={{ position: "relative", width: "80px", height: "80px", margin: "0 auto 8px" }}>
-              <svg viewBox="0 0 36 36" style={{ width: "100%", height: "100%", transform: "rotate(-90deg)" }}>
-                <circle cx="18" cy="18" r="15.5" fill="none" stroke="#1f2937" strokeWidth="3" />
-                <circle cx="18" cy="18" r="15.5" fill="none"
-                  stroke={summary?.efficiency_score >= 7 ? "#4ade80" : summary?.efficiency_score >= 4 ? "#fbbf24" : "#f87171"}
-                  strokeWidth="3" strokeDasharray={`${(summary?.efficiency_score || 0) * 9.74} 97.4`}
-                  strokeLinecap="round" style={{ transition: "stroke-dasharray 0.8s" }} />
-              </svg>
-              <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "20px", fontWeight: "bold", color: "#e5e7eb" }}>
-                {summary?.efficiency_score ?? "—"}
-              </div>
-            </div>
-            <div style={{ color: "#9ca3af", fontSize: "11px" }}>Efficiency Score</div>
-          </div>
-
-          {/* Lives Counters */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
-            <div style={{ background: "rgba(220,38,38,0.08)", borderRadius: "8px", padding: "10px", textAlign: "center" }}>
-              <div style={{ fontSize: "22px", fontWeight: "bold", color: "#f87171" }}>{summary?.lives_at_risk ?? "—"}</div>
-              <div style={{ fontSize: "10px", color: "#9ca3af" }}>At Risk</div>
-            </div>
-            <div style={{ background: "rgba(22,163,74,0.08)", borderRadius: "8px", padding: "10px", textAlign: "center" }}>
-              <div style={{ fontSize: "22px", fontWeight: "bold", color: "#4ade80" }}>{summary?.lives_secured ?? "—"}</div>
-              <div style={{ fontSize: "10px", color: "#9ca3af" }}>Secured</div>
-            </div>
-          </div>
-
           {/* Resource Bars */}
-          <div style={{ background: "rgba(255,255,255,0.03)", borderRadius: "10px", padding: "14px" }}>
-            <h4 style={{ color: "#9ca3af", fontSize: "11px", textTransform: "uppercase", marginBottom: "10px" }}>Resources</h4>
+          <div style={{ background: "rgba(255,255,255,0.03)", borderRadius: "12px", padding: "18px", border: "1px solid rgba(255,255,255,0.06)" }}>
+            <h3 style={{ color: "#a7a7a7", fontSize: "12px", textTransform: "uppercase", marginBottom: "14px", fontFamily: "Inter, sans-serif", fontWeight: 600, letterSpacing: "1px" }}>Resources</h3>
             <ResourceBar label="Ambulances" data={ra.ambulances} color="#f87171" />
             <ResourceBar label="Fire Trucks" data={ra.fire_trucks} color="#fbbf24" />
             <ResourceBar label="NDRF Teams" data={ra.ndrf_teams} color="#60a5fa" />
           </div>
 
-          {/* Gemma Chat */}
-          <div style={{ flex: 1, background: "rgba(0,0,0,0.2)", borderRadius: "10px", display: "flex", flexDirection: "column", minHeight: "200px" }}>
-            <div style={{ padding: "10px 14px", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
-              <h4 style={{ margin: 0, fontSize: "13px", color: "#c4b5fd" }}>🧠 Gemma Advisor</h4>
-            </div>
-            <div style={{ padding: "6px 10px", display: "flex", flexWrap: "wrap", gap: "4px" }}>
-              {EXAMPLE_QUESTIONS.map((q, i) => (
-                <button key={i} onClick={() => sendChat(q)} style={{ background: "#374151", color: "#d1d5db", border: "none", borderRadius: "12px", padding: "3px 8px", fontSize: "10px", cursor: "pointer" }}>{q}</button>
-              ))}
-            </div>
-            <div style={{ flex: 1, overflowY: "auto", padding: "8px 10px", display: "flex", flexDirection: "column", gap: "6px" }}>
-              {chatMessages.length === 0 && <p style={{ color: "#4b5563", fontSize: "11px", textAlign: "center", marginTop: "20px" }}>Ask Gemma...</p>}
-              {chatMessages.map((m, i) => (
-                <div key={i} style={{ alignSelf: m.role === "user" ? "flex-end" : "flex-start", maxWidth: "90%", padding: "6px 10px", borderRadius: "8px", background: m.role === "user" ? "#7c3aed" : "rgba(255,255,255,0.05)", color: m.role === "user" ? "white" : "#d1d5db", fontSize: "12px", lineHeight: 1.4 }}>
-                  {m.content}
-                  {m.model && <div style={{ fontSize: "9px", color: "#6b7280", marginTop: "3px" }}>— {m.model}</div>}
+          {/* Timeline */}
+          {(tf.next_30_min || tf.next_2_hours || tf.resolution_estimate) && (
+            <div style={{ background: "rgba(255,255,255,0.03)", borderRadius: "12px", padding: "18px", border: "1px solid rgba(255,255,255,0.06)" }}>
+              <h3 style={{ color: "#a7a7a7", fontSize: "12px", textTransform: "uppercase", marginBottom: "14px", fontFamily: "Inter, sans-serif", fontWeight: 600, letterSpacing: "1px" }}>Timeline Forecast</h3>
+              {[
+                ["Next 30 min", tf.next_30_min],
+                ["Next 2 hours", tf.next_2_hours],
+                ["Resolution", tf.resolution_estimate],
+              ].map(([label, text], i) => text && (
+                <div key={i} style={{ display: "flex", gap: "12px", marginBottom: "10px", alignItems: "flex-start" }}>
+                  <span style={{ color: "#a7a7a7", fontSize: "11px", fontWeight: "600", minWidth: "80px", fontFamily: "Inter, sans-serif" }}>{label}</span>
+                  <span style={{ color: "#d1d5db", fontSize: "13px", lineHeight: 1.5 }}>{text}</span>
                 </div>
               ))}
-              {chatLoading && <div style={{ alignSelf: "flex-start", padding: "6px 10px", borderRadius: "8px", background: "rgba(255,255,255,0.05)", color: "#a78bfa", fontSize: "12px" }}>Thinking...</div>}
-              <div ref={chatEndRef} />
             </div>
-            <div style={{ padding: "8px 10px", borderTop: "1px solid rgba(255,255,255,0.06)", display: "flex", gap: "6px" }}>
-              <input value={chatInput} onChange={e => setChatInput(e.target.value)} onKeyDown={e => e.key === "Enter" && sendChat()}
-                placeholder="Ask Gemma..." style={{ flex: 1, padding: "6px 10px", borderRadius: "6px", background: "#1f2937", color: "white", border: "1px solid #374151", fontSize: "12px", outline: "none" }} />
-              <button onClick={() => sendChat()} disabled={chatLoading} style={{ padding: "6px 12px", background: "#7c3aed", color: "white", border: "none", borderRadius: "6px", cursor: "pointer", fontWeight: "bold", fontSize: "12px" }}>➤</button>
+          )}
+
+          {/* Critical Decisions */}
+          {summary?.critical_decisions?.length > 0 && (
+            <div>
+              <h3 style={{ color: "#a7a7a7", fontSize: "12px", textTransform: "uppercase", marginBottom: "12px", fontFamily: "Inter, sans-serif", fontWeight: 600, letterSpacing: "1px" }}>Critical Decisions</h3>
+              {summary.critical_decisions.map((d, i) => (
+                <div key={i} style={{ background: "rgba(255,255,255,0.03)", borderRadius: "8px", padding: "12px 14px", marginBottom: "8px", border: "1px solid rgba(255,255,255,0.06)" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "8px" }}>
+                    <span style={{ color: "#e5e7eb", fontSize: "13px", fontWeight: "600" }}>{d.decision}</span>
+                    <span style={{ color: "#a7a7a7", fontSize: "11px" }}>{d.urgency}</span>
+                  </div>
+                  <div style={{ display: "flex", gap: "6px", marginBottom: "6px" }}>
+                    {d.options?.map((opt, j) => (
+                      <button key={j} onClick={() => sendChat(`Commander chose: "${opt}" for decision "${d.decision}". Analyze the consequences.`)}
+                        style={{ flex: 1, padding: "7px", background: "rgba(255,255,255,0.05)", color: "#d1d5db", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "6px", fontSize: "12px", fontFamily: "Inter, sans-serif", cursor: "pointer" }}>
+                        {opt}
+                      </button>
+                    ))}
+                  </div>
+                  {d.gemma_recommendation && <div style={{ color: "#a7a7a7", fontSize: "11px", fontStyle: "italic" }}>{d.gemma_recommendation}</div>}
+                </div>
+              ))}
             </div>
-          </div>
+          )}
+
         </div>
       </div>
     </div>
   );
 }
+

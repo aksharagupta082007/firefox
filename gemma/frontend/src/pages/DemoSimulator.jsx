@@ -129,7 +129,7 @@ export default function DemoSimulator({ onSimulationComplete }) {
     };
   }, [result, lat, lon]);
   return <div>
-      <h2 style={{ marginBottom: 8 }}>Track 5 — Demo Simulator</h2>
+      <h2 className="dashboard-title" style={{ marginBottom: 8 }}>Track 5 — Demo Simulator</h2>
       <p className="text-muted" style={{ marginBottom: 24, fontSize: "0.85rem" }}>
         One-click full pipeline execution. Target: Detection → Dispatch in &lt; 30 seconds.
       </p>
