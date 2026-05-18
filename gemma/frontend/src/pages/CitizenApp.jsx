@@ -12,8 +12,15 @@ export default function CitizenApp() {
   const [sending, setSending] = useState(false);
   const [streamedText, setStreamedText] = useState("");
   const [recording, setRecording] = useState(false);
+  const [voiceError, setVoiceError] = useState("");
+  const [interimTranscript, setInterimTranscript] = useState("");
+  const [transcribingVoice, setTranscribingVoice] = useState(false);
+  const [speechSupported, setSpeechSupported] = useState(true);
+  const recognitionRef = useRef(null);
+  const finalTranscriptRef = useRef("");
   const mediaRecorder = useRef(null);
   const audioChunks = useRef([]);
+  const mediaStream = useRef(null);
   const chatEnd = useRef(null);
 
   // Chat history for multi-turn context
@@ -32,6 +39,12 @@ export default function CitizenApp() {
 
   // Feature 2: Language
   const [lang, setLang] = useState("english");
+  const speechLang = {
+    english: "en-IN",
+    hindi: "hi-IN",
+    marathi: "mr-IN",
+  }[lang] || "en-IN";
+
   const speakResponse = (text, language) => {
     window.speechSynthesis.cancel();
     const utter = new SpeechSynthesisUtterance(text);
@@ -77,6 +90,16 @@ export default function CitizenApp() {
   useEffect(() => {
     chatEnd.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, streamedText]);
+
+  useEffect(() => {
+    setSpeechSupported(Boolean(navigator.mediaDevices?.getUserMedia && window.MediaRecorder));
+
+    return () => {
+      recognitionRef.current?.abort();
+      recognitionRef.current = null;
+      mediaStream.current?.getTracks().forEach(track => track.stop());
+    };
+  }, []);
 
   // ── Streaming SOS ──
   const sendMessage = async (text = null) => {
@@ -172,28 +195,99 @@ export default function CitizenApp() {
     }
   };
 
-  // ── Voice Recording ──
-  const startRecording = async () => {
+  const transcribeRecordedAudio = async (audioBlob) => {
+    setTranscribingVoice(true);
+    setVoiceError("");
+
+    try {
+      const base64Audio = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result.split(",")[1]);
+        reader.onerror = reject;
+        reader.readAsDataURL(audioBlob);
+      });
+
+      const response = await fetch(`${API_BASE}/api/citizen/transcribe`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { "Authorization": `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({
+          audio_b64: base64Audio,
+          lat: userLat,
+          lon: userLon,
+        }),
+      });
+
+      if (!response.ok) throw new Error("Transcription failed");
+
+      const data = await response.json();
+      const transcript = data.transcription?.trim();
+      if (!transcript) throw new Error("Empty transcription");
+
+      setInput("");
+      sendMessage(transcript);
+    } catch (e) {
+      setVoiceError("Voice transcription is unavailable. Please type your SOS.");
+    } finally {
+      setTranscribingVoice(false);
+      mediaRecorder.current = null;
+      audioChunks.current = [];
+      mediaStream.current?.getTracks().forEach(track => track.stop());
+      mediaStream.current = null;
+    }
+  };
+
+  const startMediaRecording = async () => {
+    if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) {
+      setSpeechSupported(false);
+      setVoiceError("Voice input is not available in this browser. Type your SOS instead.");
+      return;
+    }
+
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      mediaRecorder.current = new MediaRecorder(stream);
+      const options = MediaRecorder.isTypeSupported("audio/webm") ? { mimeType: "audio/webm" } : undefined;
+      const recorder = new MediaRecorder(stream, options);
+      mediaStream.current = stream;
+      mediaRecorder.current = recorder;
       audioChunks.current = [];
-      mediaRecorder.current.ondataavailable = (e) => audioChunks.current.push(e.data);
-      mediaRecorder.current.onstop = () => {
-        const audioBlob = new Blob(audioChunks.current, { type: 'audio/wav' });
-        const reader = new FileReader();
-        reader.readAsDataURL(audioBlob);
-        reader.onloadend = () => {
-          const base64Audio = reader.result.split(',')[1];
-          sendMessage(`[Voice SOS]: ${base64Audio.substring(0, 50)}...`);
-        };
+
+      recorder.ondataavailable = (event) => {
+        if (event.data.size > 0) audioChunks.current.push(event.data);
       };
-      mediaRecorder.current.start();
+
+      recorder.onstop = () => {
+        setRecording(false);
+        const audioBlob = new Blob(audioChunks.current, { type: recorder.mimeType || "audio/webm" });
+        transcribeRecordedAudio(audioBlob);
+      };
+
+      recorder.start();
       setRecording(true);
-    } catch (e) { console.error("Mic access denied:", e); }
+      setVoiceError("");
+    } catch (e) {
+      setRecording(false);
+      setVoiceError("Microphone permission was blocked. Allow microphone access or type your SOS.");
+    }
   };
+
+  // Voice-to-text
+  const startRecording = () => {
+    if (sending || recording) return;
+    startMediaRecording();
+  };
+
   const stopRecording = () => {
-    if (mediaRecorder.current) { mediaRecorder.current.stop(); setRecording(false); }
+    if (recognitionRef.current && recording) {
+      recognitionRef.current.stop();
+      return;
+    }
+
+    if (mediaRecorder.current && mediaRecorder.current.state === "recording") {
+      mediaRecorder.current.stop();
+    }
   };
 
   return (
@@ -259,11 +353,17 @@ export default function CitizenApp() {
 
           <div className="chat-input-bar">
             <button
+              type="button"
               className={`voice-btn ${recording ? 'recording' : ''}`}
-              onMouseDown={startRecording} onMouseUp={stopRecording}
-              onTouchStart={startRecording} onTouchEnd={stopRecording}
-            >🎤</button>
-            <input className="chat-input" placeholder="Type your emergency here..."
+              onPointerDown={startRecording}
+              onPointerUp={stopRecording}
+              onPointerCancel={stopRecording}
+              onPointerLeave={stopRecording}
+              disabled={sending || transcribingVoice || !speechSupported}
+              title={speechSupported ? "Hold to speak" : "Speech recognition unavailable"}
+              aria-label={recording ? "Listening to emergency message" : "Hold to speak emergency message"}
+            >{recording ? "■" : "🎤"}</button>
+            <input className="chat-input" placeholder={recording ? "Listening..." : "Type your emergency here..."}
               value={input} onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && sendMessage()}
             />
@@ -271,6 +371,12 @@ export default function CitizenApp() {
               {sending ? "..." : "SEND SOS"}
             </button>
           </div>
+
+          {(recording || transcribingVoice || interimTranscript || voiceError) && (
+            <div className={`voice-status ${voiceError ? "error" : ""}`}>
+              {voiceError || (transcribingVoice ? "Transcribing voice..." : interimTranscript ? `Hearing: ${interimTranscript}` : "Listening. Release to send.")}
+            </div>
+          )}
 
           {/* Offline SMS */}
           {networkError && (

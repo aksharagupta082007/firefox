@@ -1158,6 +1158,27 @@ h3 { font-size: 1.2rem; }
   animation: pulse-alert 1s ease-in-out infinite;
 }
 
+.voice-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.voice-status {
+  margin-top: 8px;
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  background: rgba(232, 80, 2, 0.12);
+  border: 1px solid rgba(232, 80, 2, 0.28);
+  color: #fed7aa;
+  font-size: 0.8rem;
+}
+
+.voice-status.error {
+  background: rgba(127, 29, 29, 0.45);
+  border-color: rgba(248, 113, 113, 0.35);
+  color: #fecaca;
+}
+
 /* ═══ Glass Card ═════════════════════════════════════════════ */
 .glass-card {
   background: rgba(26, 26, 26, 0.85);
