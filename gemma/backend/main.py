@@ -11,10 +11,13 @@ import uuid
 from datetime import datetime
 from contextlib import asynccontextmanager
 
+from dotenv import load_dotenv
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Depends, HTTPException, BackgroundTasks, Body
 from fastapi.responses import StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+
+load_dotenv(os.path.join(os.path.dirname(__file__), ".env"))
 
 from backend.ai.llm_gateway import call_gemma_fast, call_gemma_smart
 
@@ -169,6 +172,16 @@ async def submit_voice_sos(inp: AudioInput, background_tasks: BackgroundTasks):
     background_tasks.add_task(disaster_graph.ainvoke, {"sos_report": report, "history": []}, thread)
     
     return {"status": "processing", "report_id": report_id, "transcription": text}
+
+@app.post("/api/citizen/transcribe")
+async def transcribe_citizen_audio(inp: AudioInput):
+    """Transcribe citizen audio for the SOS chat without creating an incident."""
+    import base64
+    audio_bytes = base64.b64decode(inp.audio_b64)
+    text = await voice_processor.transcribe_stream(audio_bytes)
+    if not text or text == "[Voice processing unavailable]":
+        raise HTTPException(status_code=503, detail="Voice transcription is unavailable on this server.")
+    return {"transcription": text}
 
 # ── Tactical Actions & HITL ───────────────────────────────────────────
 @app.post("/api/admin/approve/{report_id}", dependencies=[Depends(is_admin)])
@@ -423,6 +436,22 @@ RULES:
         try:
             full_response = ""
             messages = [{"role": "user", "content": prompt}]
+
+            def fallback_triage_response() -> str:
+                msg_lower = message.lower()
+                if lang == "hindi":
+                    return "आपकी लोकेशन पिन हो गई है। अभी सुरक्षित जगह पर रहें और हिलें नहीं अगर चोट लगी है। कितने लोग आपके साथ हैं?"
+                if lang == "marathi":
+                    return "तुमचे लोकेशन पिन झाले आहे. जखम असेल तर हलू नका आणि सुरक्षित ठिकाणी थांबा. तुमच्यासोबत किती लोक आहेत?"
+                if "gas" in msg_lower:
+                    return "You said gas. Leave immediately. Do not touch switches. How many people are with you?"
+                if "fire" in msg_lower or "smoke" in msg_lower:
+                    return "You said fire or smoke. Get low and crawl away now. Is anyone unconscious or not breathing?"
+                if "trapped" in msg_lower or "stuck" in msg_lower:
+                    return "You said you are trapped. Stop moving and tap pipes 3 times every minute. Can you see daylight?"
+                if "bleeding" in msg_lower or "injured" in msg_lower:
+                    return "You said injury. Press hard on the wound with cloth and stay still. Is anyone unconscious or not breathing?"
+                return "Your location is pinned. Stay still if injured and move away from glass if safe. How many people are with you?"
             
             # Try Primary (Online Hugging Face)
             try:
@@ -443,31 +472,37 @@ RULES:
                     content = chunk.choices[0].delta.content
                     if content:
                         full_response += content
-                        safe = content.replace('\\', '\\\\').replace('"', '\\"').replace('\n', '\\n').replace('\r', '')
-                        yield f'data: {{"type":"chunk","text":"{safe}"}}\n\n'
+                        safe = json.dumps({"type": "chunk", "text": content})
+                        yield f"data: {safe}\n\n"
                         
             except Exception as e:
                 logger.warning(f"🌐 HF Stream Failed: {e}. Switching to LOCAL FALLBACK.")
-                from openai import AsyncOpenAI
-                ollama_url = os.getenv("OLLAMA_URL", "http://host.docker.internal:11434/v1")
-                local_model = os.getenv("LOCAL_FALLBACK_MODEL", "gemma2:2b")
-                local_client = AsyncOpenAI(base_url=ollama_url, api_key="ollama")
-                
-                response_stream = await local_client.chat.completions.create(
-                    model=local_model,
-                    messages=messages,
-                    temperature=0.7,
-                    max_tokens=300,
-                    stream=True
-                )
-                async for chunk in response_stream:
-                    if not chunk.choices:
-                        continue
-                    content = chunk.choices[0].delta.content
-                    if content:
-                        full_response += content
-                        safe = content.replace('\\', '\\\\').replace('"', '\\"').replace('\n', '\\n').replace('\r', '')
-                        yield f'data: {{"type":"chunk","text":"{safe}"}}\n\n'
+                try:
+                    from openai import AsyncOpenAI
+                    ollama_url = os.getenv("OLLAMA_URL", "http://host.docker.internal:11434/v1")
+                    local_model = os.getenv("LOCAL_FALLBACK_MODEL", "gemma2:2b")
+                    local_client = AsyncOpenAI(base_url=ollama_url, api_key="ollama")
+                    
+                    response_stream = await local_client.chat.completions.create(
+                        model=local_model,
+                        messages=messages,
+                        temperature=0.7,
+                        max_tokens=300,
+                        stream=True
+                    )
+                    async for chunk in response_stream:
+                        if not chunk.choices:
+                            continue
+                        content = chunk.choices[0].delta.content
+                        if content:
+                            full_response += content
+                            safe = json.dumps({"type": "chunk", "text": content})
+                            yield f"data: {safe}\n\n"
+                except Exception as local_error:
+                    logger.warning(f"Local fallback failed: {local_error}. Using rule-based triage response.")
+                    full_response = fallback_triage_response()
+                    safe = json.dumps({"type": "chunk", "text": full_response})
+                    yield f"data: {safe}\n\n"
 
             # Classify triage
             msg_lower = message.lower()

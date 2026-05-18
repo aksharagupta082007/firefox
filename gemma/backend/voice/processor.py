@@ -5,6 +5,7 @@ Integrates Faster-Whisper for STT and Piper for TTS.
 import os
 import logging
 import asyncio
+import tempfile
 from typing import Optional
 try:
     from faster_whisper import WhisperModel
@@ -39,17 +40,18 @@ class VoiceProcessor:
         if not self.stt_model:
             return "[Voice processing unavailable]"
 
-        # Simple file-based transcription for demonstration
-        # In real-time, we'd use a raw audio buffer
-        temp_file = "temp_voice.wav"
-        with open(temp_file, "wb") as f:
-            f.write(audio_bytes)
-            
-        segments, info = self.stt_model.transcribe(temp_file, beam_size=5)
-        text = " ".join([segment.text for segment in segments])
-        
-        os.remove(temp_file)
-        return text.strip()
+        temp_file = None
+        try:
+            with tempfile.NamedTemporaryFile(delete=False, suffix=".webm") as f:
+                f.write(audio_bytes)
+                temp_file = f.name
+
+            segments, info = self.stt_model.transcribe(temp_file, beam_size=5)
+            text = " ".join([segment.text for segment in segments])
+            return text.strip()
+        finally:
+            if temp_file and os.path.exists(temp_file):
+                os.remove(temp_file)
 
     async def generate_speech(self, text: str, output_path: str):
         """

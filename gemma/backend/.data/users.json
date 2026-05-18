@@ -28,5 +28,15 @@
     "username": "tinkerbell0801207@gmail.com",
     "password": "$2b$12$1Abip.sbUceiIKIV6pmIyORHDWxkU/N2riiu9vQ4rJNa1OzUk7aJq",
     "role": "responder"
+  },
+  "responder@gmail.com": {
+    "username": "responder@gmail.com",
+    "password": "$2b$12$4GIVceviWlcebO4vtKiRvOYF8ugmhxGWZJ/heMZrE1ldJ77iFHGpC",
+    "role": "responder"
+  },
+  "admin123@gmail.com": {
+    "username": "admin123@gmail.com",
+    "password": "$2b$12$Ek8.z3OCCFLe7hSEVySeD.kvBcS3LaSj3u/PE1Khy6eyXGWwO5wGa",
+    "role": "admin"
   }
 }

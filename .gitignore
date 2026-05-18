@@ -54,3 +54,5 @@ out/
 backend/.data/
 __pycache__/
 *.pyc
+
+gemma\backend\.data\users.json

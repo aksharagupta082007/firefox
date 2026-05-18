@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 
 const API_BASE = import.meta.env.VITE_API_URL || `http://${window.location.hostname}:8000`;
 
@@ -35,6 +35,7 @@ export default function ResponderSOS() {
   const mediaRecorder = useRef(null);
   const audioChunks = useRef([]);
   const chatEnd = useRef(null);
+  const abortControllerRef = useRef(null);
 
   // Chat history for multi-turn context
   const [chatHistory, setChatHistory] = useState([]);
@@ -98,6 +99,15 @@ export default function ResponderSOS() {
     window.location.href = `sms:112?body=${encodeURIComponent(payload)}`;
   };
 
+  // Cleanup: abort any in-flight SSE stream when component unmounts
+  useEffect(() => {
+    return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
+  }, []);
+
   // Auto-scroll
   useEffect(() => {
     chatEnd.current?.scrollIntoView({ behavior: "smooth" });
@@ -108,6 +118,13 @@ export default function ResponderSOS() {
     const userMsg = text || input.trim();
     if (!userMsg || sending) return;
     if (!text) setInput("");
+
+    // Abort any previous in-flight stream before starting a new one
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
 
     setMessages(prev => [...prev, { role: "user", content: userMsg }]);
     setSending(true);
@@ -131,6 +148,7 @@ export default function ResponderSOS() {
           battery: batteryLevel, lang: "english",
           history: chatHistory,
         }),
+        signal: controller.signal,
       });
 
       if (response.status === 403 || response.status === 401) {
@@ -204,6 +222,9 @@ export default function ResponderSOS() {
         setSending(false);
       }
     } catch (err) {
+      // Ignore abort errors — these are intentional (new message sent or unmount)
+      if (err.name === 'AbortError') return;
+
       setNetworkError(true);
       setMessages(prev => [...prev, {
         role: "ai", content: "🚨 Connection severed. Deploy secondary offline satellite systems or execute satellite SMS dispatch.",
@@ -521,4 +542,4 @@ export default function ResponderSOS() {
       `}</style>
     </div>
   );
-}
+} 
