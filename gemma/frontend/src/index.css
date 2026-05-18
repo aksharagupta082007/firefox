@@ -158,7 +158,7 @@ h3 { font-size: 1.2rem; }
   text-decoration: none;
 }
 
-.navbar-brand .logo {
+/* .navbar-brand .logo {
   width: 36px;
   height: 36px;
   background: var(--gradient-accent);
@@ -169,7 +169,7 @@ h3 { font-size: 1.2rem; }
   font-weight: 900;
   font-size: 14px;
   color: #0a0e1a;
-}
+} */
 
 .navbar-brand h1 {
   font-size: 1.1rem;
@@ -1019,7 +1019,7 @@ h3 { font-size: 1.2rem; }
 }
 
 .gradient-text {
-  background: linear-gradient(135deg, #e85002, #ff8c42, #f1f5f9);
+  background: #ff8c42;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;

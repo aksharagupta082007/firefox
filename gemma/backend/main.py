@@ -734,6 +734,7 @@ RULES:
             
             # Try Primary (Online Hugging Face)
             try:
+                # pyrefly: ignore [missing-import]
                 from huggingface_hub import AsyncInferenceClient
                 hf_token = os.getenv("HUGGINGFACE_API_KEY")
                 hf_client = AsyncInferenceClient(token=hf_token)
@@ -898,6 +899,7 @@ CRITICAL INSTRUCTIONS FOR YOUR RESPONSE:
             
             # Try Primary (Online Hugging Face)
             try:
+                # pyrefly: ignore [missing-import]
                 from huggingface_hub import AsyncInferenceClient
                 hf_token = os.getenv("HUGGINGFACE_API_KEY")
                 hf_client = AsyncInferenceClient(token=hf_token)

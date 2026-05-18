@@ -17,15 +17,15 @@ class RedisClient:
 
     async def connect(self):
         if not self.client:
-            client = redis.from_url(self.redis_url, decode_responses=True)
+            client: redis.Redis = redis.Redis.from_url(self.redis_url, decode_responses=True)
             try:
-                await client.ping()
-            except Exception:
-                await client.close()
+                client.ping()
+                self.client = client
+                logger.info(f"✅ Connected to Redis at {self.redis_url}")
+            except Exception as e:
+                await client.aclose()
                 self.client = None
-                raise
-            self.client = client
-            logger.info(f"✅ Connected to Redis at {self.redis_url}")
+                logger.warning(f"⚠️  Redis unavailable at {self.redis_url} — running without persistence. ({e})")
 
     async def disconnect(self):
         if self.client:

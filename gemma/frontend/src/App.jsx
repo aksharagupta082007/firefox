@@ -11,21 +11,30 @@ import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 import SeismicWave from "./components/SeismicWave";
 
+// Read user synchronously to avoid black screen flash on redirect
+function getInitialUser() {
+  try {
+    const saved = localStorage.getItem("aurora_user");
+    return saved ? JSON.parse(saved) : null;
+  } catch {
+    return null;
+  }
+}
+
 export default function App() {
-  const [user, setUser] = useState(null);
-  const [page, setPage] = useState("demo");
+  const [user, setUser] = useState(getInitialUser);
+  const [page, setPage] = useState(() => {
+    // Restore to the correct dashboard page on reload
+    const saved = getInitialUser();
+    if (saved?.role === 'admin') return "admin";
+    if (saved?.role === 'responder') return "responder";
+    if (saved?.role === 'citizen') return "citizen";
+    return "demo";
+  });
   const [isAlert, setIsAlert] = useState(false);
   const [latestResult, setLatestResult] = useState(null);
   const [heroSlidUp, setHeroSlidUp] = useState(false);
   const [mousePos, setMousePos] = useState({ x: 50, y: 50 });
-
-  // Persistence
-  useEffect(() => {
-    const savedUser = localStorage.getItem("aurora_user");
-    if (savedUser) {
-      setUser(JSON.parse(savedUser));
-    }
-  }, []);
 
   useEffect(() => {
     const handleMouseMove = (e) => {
