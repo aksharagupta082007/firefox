@@ -44,7 +44,7 @@ export default function ResponderDashboard() {
       Notification.requestPermission();
     }
 
-    return () => ws.close();
+    return () => ws.stop?.();
   }, []);
 
   const handleComplete = (id) => {

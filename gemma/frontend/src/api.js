@@ -129,6 +129,7 @@ export const api = {
 export function createWebSocket(role, onMessage) {
   // Pass role to backend to subscribe to correct channel
   const ws = new WebSocket(`${WS_BASE}/ws/${role}`);
+  let shouldReconnect = true;
   
   ws.onmessage = (event) => {
     try {

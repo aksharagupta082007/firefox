@@ -8,5 +8,20 @@
     "username": "swara.011211@gmail.com",
     "password": "$2b$12$HVJCJePnCQcxQnImG7bPxuhXKprevLoMZkIDQhxwC5ja3NpyWb..e",
     "role": "citizen"
+  },
+  "admin@gmail.com": {
+    "username": "admin@gmail.com",
+    "password": "$2b$12$TGKJ3B5cmP6AgbqhZViC4uQOYjp4wlmbinmVni4.OfD7KD5A/ZpnK",
+    "role": "admin"
+  },
+  "responder@gmail.com": {
+    "username": "responder@gmail.com",
+    "password": "$2b$12$DsXON/0Ir8ovjGZO.437K.xdsjUkddXkeMIq47VUWnkoPC74KgLZS",
+    "role": "responder"
+  },
+  "admin123@gmail.com": {
+    "username": "admin123@gmail.com",
+    "password": "$2b$12$bvR3r9dvX5.us.pZyPYgs.6vccLJNoZXl0Uq1Gs4lqG2TqVdrwtCm",
+    "role": "admin"
   }
 }
