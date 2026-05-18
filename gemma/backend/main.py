@@ -435,12 +435,16 @@ RULES:
                     model=model_name,
                     messages=messages,
                     temperature=0.7,
-                    max_tokens=300,
+                    max_tokens=800,
                     stream=True
                 ):
                     if not chunk.choices:
                         continue
-                    content = chunk.choices[0].delta.content
+                    
+                    delta = chunk.choices[0].delta
+                    c_text = getattr(delta, "content", "") or ""
+                    content = c_text
+
                     if content:
                         full_response += content
                         safe = content.replace('\\', '\\\\').replace('"', '\\"').replace('\n', '\\n').replace('\r', '')
@@ -453,17 +457,15 @@ RULES:
                 local_model = os.getenv("LOCAL_FALLBACK_MODEL", "gemma2:2b")
                 local_client = AsyncOpenAI(base_url=ollama_url, api_key="ollama")
                 
-                response_stream = await local_client.chat.completions.create(
+                response = await local_client.chat.completions.create(
                     model=local_model,
                     messages=messages,
                     temperature=0.7,
                     max_tokens=300,
-                    stream=True
+                    stream=False
                 )
-                async for chunk in response_stream:
-                    if not chunk.choices:
-                        continue
-                    content = chunk.choices[0].delta.content
+                if response.choices:
+                    content = response.choices[0].message.content
                     if content:
                         full_response += content
                         safe = content.replace('\\', '\\\\').replace('"', '\\"').replace('\n', '\\n').replace('\r', '')
@@ -597,12 +599,16 @@ CRITICAL INSTRUCTIONS FOR YOUR RESPONSE:
                     model=model_name,
                     messages=messages,
                     temperature=0.7,
-                    max_tokens=350,
+                    max_tokens=800,
                     stream=True
                 ):
                     if not chunk.choices:
                         continue
-                    content = chunk.choices[0].delta.content
+                    
+                    delta = chunk.choices[0].delta
+                    c_text = getattr(delta, "content", "") or ""
+                    content = c_text
+
                     if content:
                         full_response += content
                         safe = content.replace('\\', '\\\\').replace('"', '\\"').replace('\n', '\\n').replace('\r', '')
@@ -615,17 +621,15 @@ CRITICAL INSTRUCTIONS FOR YOUR RESPONSE:
                 local_model = os.getenv("LOCAL_FALLBACK_MODEL", "gemma2:2b")
                 local_client = AsyncOpenAI(base_url=ollama_url, api_key="ollama")
                 
-                response_stream = await local_client.chat.completions.create(
+                response = await local_client.chat.completions.create(
                     model=local_model,
                     messages=messages,
                     temperature=0.7,
                     max_tokens=350,
-                    stream=True
+                    stream=False
                 )
-                async for chunk in response_stream:
-                    if not chunk.choices:
-                        continue
-                    content = chunk.choices[0].delta.content
+                if response.choices:
+                    content = response.choices[0].message.content
                     if content:
                         full_response += content
                         safe = content.replace('\\', '\\\\').replace('"', '\\"').replace('\n', '\\n').replace('\r', '')

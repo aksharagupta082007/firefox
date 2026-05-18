@@ -33,5 +33,15 @@
     "username": "clinician@mindscreen.com",
     "password": "$2b$12$1Qh3KTxY1DKpCoFYT/TbCO6FSCY0ifYzPWZhochqUn4ORnNCkrD9i",
     "role": "citizen"
+  },
+  "citizen@gmail.com": {
+    "username": "citizen@gmail.com",
+    "password": "$2b$12$HR0dLkl6j/fX6YD18bgBN./PCB5zpcii5Fd0yYhMS14lUDXFUSCey",
+    "role": "citizen"
+  },
+  "admin1@gmail.com": {
+    "username": "admin1@gmail.com",
+    "password": "$2b$12$wXixSMwoYexLl3jLYQqI5OrGGk.1nOxdEQH21aC//4bBmdNukw0O6",
+    "role": "admin"
   }
 }
