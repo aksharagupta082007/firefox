@@ -18,5 +18,15 @@
     "username": "clinician@mindscreen.com",
     "password": "$2b$12$1Qh3KTxY1DKpCoFYT/TbCO6FSCY0ifYzPWZhochqUn4ORnNCkrD9i",
     "role": "citizen"
+  },
+  "devarshibdesale15@gmail.com": {
+    "username": "devarshibdesale15@gmail.com",
+    "password": "$2b$12$Wmsi9Q4OOAYaGIIZe/NhkOfgM9MnuIJnjaqNSrowoZ7tANceFulTK",
+    "role": "citizen"
+  },
+  "astra0109d@gmail.com": {
+    "username": "astra0109d@gmail.com",
+    "password": "$2b$12$gD5/E6.h0vd11Ru/lB3A1.MLgOkdgqICL6iLanYoJzNLaML.SXHna",
+    "role": "responder"
   }
 }

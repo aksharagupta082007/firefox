@@ -153,7 +153,7 @@ export default function ResponderDashboard() {
                         border: "none", borderRadius: "6px", fontSize: "13px",
                         fontWeight: "bold", cursor: "pointer",
                       }}>
-                        📋 Get Full Briefing
+                        Get Full Briefing
                       </button>
                       <button onClick={() => handleComplete(d.incident_id)} style={{
                         flex: 1, padding: "8px", background: "#16a34a", color: "white",
@@ -182,14 +182,16 @@ export default function ResponderDashboard() {
         {/* ── Right: Map ── */}
         <div style={{ minHeight: "400px" }}>
           <AuroraMap
-            points={[
-              { ...currentLocation, label: "Your Location", type: "responder" },
-              ...dispatches.map(d => ({
-                lat: d.lat || 18.53, lon: d.lon || 73.86,
-                label: "Target Site", type: "incident",
+            data={{
+              epicenter: { lat: currentLocation.lat, lon: currentLocation.lon },
+              sosReports: dispatches.map(d => ({
+                lat: d.lat || 18.53,
+                lon: d.lon || 73.86,
+                message: d.message || "Dispatch Target",
+                severity: d.triage_level === "CRITICAL" ? 5 : d.triage_level === "HIGH" ? 4 : 3,
               })),
-            ]}
-            zoom={14}
+            }}
+            height={400}
           />
         </div>
       </div>
@@ -210,7 +212,7 @@ export default function ResponderDashboard() {
 
             {briefingLoading ? (
               <div style={{ padding: "60px", textAlign: "center" }}>
-                <div style={{ fontSize: "32px", marginBottom: "16px" }}>🧠</div>
+                <div style={{ fontSize: "32px", marginBottom: "16px" }}></div>
                 <p style={{ color: "#a78bfa", fontSize: "16px" }}>Gemma generating tactical briefing...</p>
                 <p style={{ color: "#6b7280", fontSize: "13px", marginTop: "8px" }}>Analyzing incident data, building assessment, equipment list</p>
               </div>
@@ -269,7 +271,7 @@ export default function ResponderDashboard() {
                           borderRadius: "8px", padding: "10px 14px", marginBottom: "6px",
                           color: "#fca5a5", fontSize: "13px",
                         }}>
-                          ⚠️ {h}
+                          {h}
                         </div>
                       ))}
                     </div>
