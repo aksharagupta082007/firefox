@@ -92,11 +92,11 @@ export const api = {
   },
 
   // Phyphox Sensor Management
-  async registerDevice(ip, name) {
+  async registerDevice(ip, name, replace = true) {
     const res = await fetch(`${API_BASE}/api/sensor/register`, {
       method: "POST",
       headers: getHeaders(),
-      body: JSON.stringify({ ip, name })
+      body: JSON.stringify({ ip, name, replace })
     });
     return res.json();
   },
@@ -110,6 +110,14 @@ export const api = {
 
   async getDevices() {
     const res = await fetch(`${API_BASE}/api/sensor/devices`, {
+      headers: getHeaders()
+    });
+    return res.json();
+  },
+
+  async clearDevices() {
+    const res = await fetch(`${API_BASE}/api/sensor/devices`, {
+      method: "DELETE",
       headers: getHeaders()
     });
     return res.json();

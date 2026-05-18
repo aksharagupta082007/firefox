@@ -1214,6 +1214,8 @@ async def register_sensor_device(body: dict = Body(...)):
         return {"error": "IP address required"}
     try:
         port = int(body.get("port", 8080) or 8080)
+        if body.get("replace", True):
+            _collector.clear_devices()
         device = _collector.register_device(ip, name, port=port)
         return {"status": "registered", "device": device}
     except ValueError as e:
@@ -1264,6 +1266,12 @@ async def test_sensor_connection():
 @app.get("/api/sensor/devices")
 async def list_sensor_devices():
     return {"devices": _collector.get_devices(), "count": _collector.device_count}
+
+
+@app.delete("/api/sensor/devices")
+async def clear_sensor_devices():
+    _collector.clear_devices()
+    return {"status": "cleared", "devices": [], "count": 0}
 
 
 # ══════════════════════════════════════════════════════════════════════

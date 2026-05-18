@@ -125,6 +125,12 @@ class PhyphoxCollector:
             return True
         return False
 
+    def clear_devices(self):
+        """Remove all registered devices and recent sensor readings."""
+        self._devices.clear()
+        self.clear_buffer()
+        self._last_location = None
+
     def get_devices(self) -> List[Dict[str, Any]]:
         """Return list of all registered devices with their status."""
         return list(self._devices.values())
@@ -210,7 +216,7 @@ class PhyphoxCollector:
             device_id = "unknown"
 
         try:
-            async with session.get(url, timeout=aiohttp.ClientTimeout(total=1.0)) as resp:
+            async with session.get(url, timeout=aiohttp.ClientTimeout(total=4.0)) as resp:
                 if resp.status == 200:
                     data = await resp.json()
                     return self._parse_phyphox_json(data, device_id)

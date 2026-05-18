@@ -36,6 +36,12 @@ export default function SensorsBlocks({ useRealSensor, sensorStatus, testSensor 
     }
   };
 
+  const clearDevices = async () => {
+    setRegisterError("");
+    await api.clearDevices();
+    await testSensor();
+  };
+
   return (
     <div className="card" style={{ marginBottom: 16, padding: 16 }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
@@ -48,6 +54,9 @@ export default function SensorsBlocks({ useRealSensor, sensorStatus, testSensor 
         <div style={{ display: "flex", gap: 6 }}>
           <button className="btn btn-outline" style={{ padding: "6px 14px", fontSize: "0.75rem" }} onClick={testSensor}>
             Test All
+          </button>
+          <button className="btn btn-outline" style={{ padding: "6px 14px", fontSize: "0.75rem" }} onClick={clearDevices}>
+            Clear
           </button>
           <button
             className="btn btn-outline"
@@ -129,6 +138,7 @@ export default function SensorsBlocks({ useRealSensor, sensorStatus, testSensor 
         <div style={{ padding: 12, background: "rgba(232,80,2,0.08)", borderRadius: 8, fontSize: "0.8rem", color: "var(--severity-critical)" }}>
           {sensorStatus.error || "No devices reachable. Click Add Device to register a Phyphox phone by IP."}
           <br /><span className="text-muted" style={{ fontSize: "0.75rem" }}>Make sure: (1) Phyphox is open on phone (2) Remote access is enabled (3) Both devices are on same WiFi</span>
+          <br /><span className="text-muted" style={{ fontSize: "0.75rem" }}>Your laptop Wi-Fi is 10.10.14.184; the phone IP should usually start with 10.10 and be reachable from this laptop.</span>
           {sensorStatus.devices?.length > 0 && (
             <div className="mono" style={{ marginTop: 8, color: "var(--text-muted)" }}>
               {sensorStatus.devices.map((d) => `${d.name}: ${d.status} (${d.ip}:${d.port})`).join(" | ")}
