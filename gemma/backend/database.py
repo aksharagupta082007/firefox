@@ -160,9 +160,65 @@ class DispatchLog(Base):
 
 
 # ─── Helpers ────────────────────────────────────────────────────────────
+def seed_database():
+    """Seed the database with default Pune tactical assets and infrastructure if empty."""
+    db = SessionLocal()
+    try:
+        # Seed Resource Units
+        unit_count = db.query(ResourceUnit).count()
+        if unit_count == 0:
+            print("🌱 Seeding Aurora PostGIS database with Pune tactical units...")
+            resources = [
+                # Ambulances
+                ResourceUnit(unit_name="AMB-PUNE-01", resource_type=ResourceType.AMBULANCE, location="POINT(73.8797 18.5308)", status=ResourceStatus.AVAILABLE, station_name="Ruby Hall Clinic"),
+                ResourceUnit(unit_name="AMB-PUNE-02", resource_type=ResourceType.AMBULANCE, location="POINT(73.8636 18.5018)", status=ResourceStatus.AVAILABLE, station_name="KEM Hospital"),
+                ResourceUnit(unit_name="AMB-PUNE-03", resource_type=ResourceType.AMBULANCE, location="POINT(73.8625 18.5167)", status=ResourceStatus.AVAILABLE, station_name="Sassoon General Hospital"),
+                ResourceUnit(unit_name="AMB-PUNE-04", resource_type=ResourceType.AMBULANCE, location="POINT(73.8410 18.5158)", status=ResourceStatus.AVAILABLE, station_name="Sahyadri Hospital"),
+                ResourceUnit(unit_name="AMB-PUNE-05", resource_type=ResourceType.AMBULANCE, location="POINT(73.8166 18.4972)", status=ResourceStatus.AVAILABLE, station_name="Deenanath Mangeshkar Hospital"),
+                # Fire Trucks
+                ResourceUnit(unit_name="FTR-PUNE-01", resource_type=ResourceType.FIRE_TRUCK, location="POINT(73.8553 18.5195)", status=ResourceStatus.AVAILABLE, station_name="Pune Fire Brigade HQ"),
+                ResourceUnit(unit_name="FTR-PUNE-02", resource_type=ResourceType.FIRE_TRUCK, location="POINT(73.8697 18.4647)", status=ResourceStatus.AVAILABLE, station_name="Katraj Fire Station"),
+                ResourceUnit(unit_name="FTR-PUNE-03", resource_type=ResourceType.FIRE_TRUCK, location="POINT(73.8077 18.5074)", status=ResourceStatus.AVAILABLE, station_name="Kothrud Fire Station"),
+                ResourceUnit(unit_name="FTR-PUNE-04", resource_type=ResourceType.FIRE_TRUCK, location="POINT(73.9270 18.5130)", status=ResourceStatus.AVAILABLE, station_name="Hadapsar Fire Station"),
+                # NDRF Teams
+                ResourceUnit(unit_name="NDRF-PUNE-01", resource_type=ResourceType.NDRF, location="POINT(73.8500 18.5500)", status=ResourceStatus.AVAILABLE, station_name="Baner NDRF Base"),
+                ResourceUnit(unit_name="NDRF-PUNE-02", resource_type=ResourceType.NDRF, location="POINT(73.8900 18.5400)", status=ResourceStatus.AVAILABLE, station_name="Yerwada Rescue Depot"),
+                ResourceUnit(unit_name="NDRF-PUNE-03", resource_type=ResourceType.NDRF, location="POINT(73.7389 18.5912)", status=ResourceStatus.AVAILABLE, station_name="Hinjewadi Sub-Base"),
+                # Police Squads
+                ResourceUnit(unit_name="POL-PUNE-01", resource_type=ResourceType.POLICE, location="POINT(73.8474 18.5308)", status=ResourceStatus.AVAILABLE, station_name="Shivajinagar Police HQ"),
+                ResourceUnit(unit_name="POL-PUNE-02", resource_type=ResourceType.POLICE, location="POINT(73.8413 18.5171)", status=ResourceStatus.AVAILABLE, station_name="Deccan Police Station"),
+                ResourceUnit(unit_name="POL-PUNE-03", resource_type=ResourceType.POLICE, location="POINT(73.8077 18.5074)", status=ResourceStatus.AVAILABLE, station_name="Kothrud Police Station")
+            ]
+            db.add_all(resources)
+            db.commit()
+
+        # Seed Critical Infrastructure
+        infra_count = db.query(CriticalInfrastructure).count()
+        if infra_count == 0:
+            infra_list = [
+                CriticalInfrastructure(name="Ruby Hall Clinic", infra_type=InfraType.HOSPITAL, location="POINT(73.8797 18.5308)", capacity=400, is_operational=True),
+                CriticalInfrastructure(name="KEM Hospital", infra_type=InfraType.HOSPITAL, location="POINT(73.8636 18.5018)", capacity=600, is_operational=True),
+                CriticalInfrastructure(name="Sassoon General Hospital", infra_type=InfraType.HOSPITAL, location="POINT(73.8625 18.5167)", capacity=1200, is_operational=True),
+                CriticalInfrastructure(name="Pune Fire Brigade HQ", infra_type=InfraType.FIRE_STATION, location="POINT(73.8553 18.5195)", capacity=10, is_operational=True),
+                CriticalInfrastructure(name="Katraj Fire Station", infra_type=InfraType.FIRE_STATION, location="POINT(73.8697 18.4647)", capacity=6, is_operational=True),
+                CriticalInfrastructure(name="Shivajinagar Police HQ", infra_type=InfraType.POLICE_STATION, location="POINT(73.8474 18.5308)", capacity=50, is_operational=True),
+                CriticalInfrastructure(name="Nehru Stadium Shelter", infra_type=InfraType.SHELTER, location="POINT(73.8553 18.5167)", capacity=2000, is_operational=True),
+                CriticalInfrastructure(name="Balewadi Stadium Shelter", infra_type=InfraType.SHELTER, location="POINT(73.7769 18.5645)", capacity=3000, is_operational=True)
+            ]
+            db.add_all(infra_list)
+            db.commit()
+            print("✅ Seeding Pune critical infrastructure completed.")
+    except Exception as e:
+        db.rollback()
+        print(f"⚠️ Error seeding database: {e}")
+    finally:
+        db.close()
+
+
 def init_db():
-    """Create all tables if they don't exist."""
+    """Create all tables if they don't exist and seed default assets."""
     Base.metadata.create_all(bind=engine)
+    seed_database()
 
 
 def get_db():

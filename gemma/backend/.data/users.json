@@ -18,5 +18,10 @@
     "username": "clinician@mindscreen.com",
     "password": "$2b$12$1Qh3KTxY1DKpCoFYT/TbCO6FSCY0ifYzPWZhochqUn4ORnNCkrD9i",
     "role": "citizen"
+  },
+  "nam@mindscreen.com": {
+    "username": "nam@mindscreen.com",
+    "password": "$2b$12$NZB7pT/0izoubdbH1zXqxuchfeOGYhKPhOD344U3MBuatgVJYa5R.",
+    "role": "admin"
   }
 }

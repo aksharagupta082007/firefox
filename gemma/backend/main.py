@@ -23,6 +23,11 @@ from backend.websocket.manager import ws_manager
 from backend.services.redis_client import redis_service
 from backend.services.postgis_client import postgis_client
 from backend.ai.graphs.disaster_graph import disaster_graph
+from backend.database import (
+    init_db as init_relational_db, get_db, SessionLocal,
+    ResourceUnit, CriticalInfrastructure, ResourceStatus, ResourceType,
+    InfraType, DispatchLog
+)
 from backend.ai.schemas.emergency import SOSReport, TriageIntelligence
 
 # Setup logging
@@ -41,6 +46,11 @@ async def lifespan(app: FastAPI):
     logger.info("🚀 AURORA TECH Intelligence Engine Starting...")
     await redis_service.connect()
     postgis_client.init_db()
+    try:
+        init_relational_db()
+        logger.info("✅ Relational DB and seeder initialized.")
+    except Exception as e:
+        logger.error(f"⚠️ Relational DB initialization failed: {e}")
     
     # Start Redis Pub/Sub listener in background
     asyncio.create_task(ws_manager.start_pubsub_listener())
@@ -196,6 +206,304 @@ async def reject_tactical_action(report_id: str, reason: str = "Duplicate report
     # Cancel the graph execution or mark as resolved
     await redis_service.set_state(f"triage:{report_id}", {"status": "rejected", "reason": reason})
     return {"status": "rejected"}
+
+
+# ── PostGIS Resources and Gemma Triage Agent Core ───────────────────
+
+def get_available_resources_list():
+    """Retrieve all available emergency response units from PostgreSQL database."""
+    db = SessionLocal()
+    try:
+        units = db.query(ResourceUnit).filter(ResourceUnit.status == ResourceStatus.AVAILABLE).all()
+        result = []
+        from geoalchemy2.shape import to_shape
+        for u in units:
+            try:
+                point = to_shape(u.location)
+                lat, lon = point.y, point.x
+            except Exception:
+                lat, lon = 18.5204, 73.8567
+            result.append({
+                "id": u.id,
+                "unit_name": u.unit_name,
+                "resource_type": u.resource_type.value,
+                "station_name": u.station_name,
+                "lat": lat,
+                "lon": lon,
+                "status": u.status.value
+            })
+        return result
+    except Exception as e:
+        logger.error(f"⚠️ Error fetching available resource units from PostGIS: {e}")
+        return [
+            {"id": 1, "unit_name": "AMB-PUNE-01", "resource_type": "ambulance", "station_name": "Ruby Hall Clinic", "lat": 18.5308, "lon": 73.8797, "status": "available"},
+            {"id": 2, "unit_name": "AMB-PUNE-02", "resource_type": "ambulance", "station_name": "KEM Hospital", "lat": 18.5018, "lon": 73.8636, "status": "available"},
+            {"id": 3, "unit_name": "AMB-PUNE-03", "resource_type": "ambulance", "station_name": "Sassoon General Hospital", "lat": 18.5167, "lon": 73.8625, "status": "available"},
+            {"id": 6, "unit_name": "FTR-PUNE-01", "resource_type": "fire_truck", "station_name": "Pune Fire Brigade HQ", "lat": 18.5195, "lon": 73.8553, "status": "available"},
+            {"id": 10, "unit_name": "NDRF-PUNE-01", "resource_type": "ndrf", "station_name": "Baner NDRF Base", "lat": 18.5500, "lon": 73.8500, "status": "available"}
+        ]
+    finally:
+        db.close()
+
+
+async def generate_dispatch_proposal(incident: dict) -> dict:
+    """Invokes Gemma model to analyze the incident and available database resources to generate a detailed dispatch proposal."""
+    resources = get_available_resources_list()
+    
+    # Safely extract incident fields
+    inc_id = incident.get("id") or incident.get("incident_id") or "INC-01"
+    msg = incident.get("message") or incident.get("raw_message") or "Emergency situation reported."
+    lat = incident.get("lat") or 18.5204
+    lon = incident.get("lon") or 73.8567
+    area = incident.get("area") or incident.get("name") or "Pune Central"
+    
+    triage_info = incident.get("triage")
+    if isinstance(triage_info, dict):
+        triage = triage_info.get("triage_level", "HIGH")
+    else:
+        triage = incident.get("triage_level", "HIGH")
+    
+    prompt = f"""You are AURORA's Command Triage AI. Optimize resource allocation for a disaster incident in Pune using live PostgreSQL resource state.
+    
+    INCIDENT METADATA:
+    - ID: {inc_id}
+    - SOS Message: "{msg}"
+    - Latitude/Longitude: {lat}, {lon}
+    - Sector/Area: {area}
+    - Threat Triage Level: {triage}
+    
+    AVAILABLE EMERGENCY UNITS IN POSTGRES DB:
+    {json.dumps(resources[:10])}
+    
+    Task: Pick the absolute best units (from the available list above) to dispatch.
+    - If the message reports fires/burns/gas: prioritize fire_truck units.
+    - If the message reports collapsed structures/people trapped: prioritize ndrf units.
+    - If there are injured victims or medical trauma: prioritize ambulance units.
+    - Provide a safe routing coordinate list starting at the chosen station and ending at the incident (between 2 to 4 numeric pairs).
+    
+    Respond ONLY in this exact JSON structure (No code blocks, no other commentary):
+    {{
+      "suggested_units": [
+        {{
+          "id": <resource_id>,
+          "unit_name": "<unit_name>",
+          "resource_type": "ambulance|fire_truck|ndrf|police",
+          "station_name": "<station_name>",
+          "justification": "<concise sentence justifying the selection>",
+          "route_coordinates": [[<station_lat>, <station_lon>], [<midpoint_lat>, <midpoint_lon>], [{lat}, {lon}]],
+          "eta_minutes": <integer>
+        }}
+      ],
+      "tactical_justification": "<2-sentence strategic briefing on why these resources were chosen>"
+    }}
+    """
+    
+    try:
+        import re
+        raw = await call_gemma_smart(prompt)
+        match = re.search(r'\{.*\}', raw, re.DOTALL)
+        if match:
+            proposal = json.loads(match.group())
+            # Format and enforce coordinates safety
+            for unit in proposal.get("suggested_units", []):
+                coords = []
+                for pt in unit.get("route_coordinates", []):
+                    if len(pt) == 2:
+                        coords.append([float(pt[0]), float(pt[1])])
+                unit["route_coordinates"] = coords
+            return proposal
+    except Exception as e:
+        logger.error(f"⚠️ Gemma dispatcher agent failed: {e}")
+        
+    # Standard robust fallback
+    fallback_unit = resources[0] if resources else {"id": 1, "unit_name": "AMB-PUNE-01", "resource_type": "ambulance", "station_name": "Ruby Hall Clinic", "lat": 18.5308, "lon": 73.8797}
+    return {
+        "suggested_units": [
+            {
+                "id": fallback_unit["id"],
+                "unit_name": fallback_unit["unit_name"],
+                "resource_type": fallback_unit.get("resource_type", "ambulance"),
+                "station_name": fallback_unit.get("station_name", "Ruby Hall Clinic"),
+                "justification": "Closest available responder dispatched for immediate coverage.",
+                "route_coordinates": [[fallback_unit.get("lat", 18.5308), fallback_unit.get("lon", 73.8797)], [lat, lon]],
+                "eta_minutes": 8
+            }
+        ],
+        "tactical_justification": "Immediate deployment to stabilize incident perimeter and initiate primary triage."
+    }
+
+
+@app.get("/api/admin/resources", dependencies=[Depends(is_admin)])
+async def get_admin_resources():
+    """Retrieve all emergency response units and their real-time PostGIS statuses from database."""
+    db = SessionLocal()
+    try:
+        from geoalchemy2.shape import to_shape
+        all_units = db.query(ResourceUnit).all()
+        result = []
+        for u in all_units:
+            try:
+                point = to_shape(u.location)
+                lat, lon = point.y, point.x
+            except Exception:
+                lat, lon = 18.5204, 73.8567
+            result.append({
+                "id": u.id,
+                "unit_name": u.unit_name,
+                "resource_type": u.resource_type.value,
+                "station_name": u.station_name,
+                "lat": lat,
+                "lon": lon,
+                "status": u.status.value
+            })
+        return {"resources": result, "count": len(result)}
+    except Exception as e:
+        logger.error(f"⚠️ Failed to fetch all resources: {e}")
+        return {"resources": get_available_resources_list(), "count": 4}
+    finally:
+        db.close()
+
+
+@app.get("/api/admin/proposal/{incident_id}", dependencies=[Depends(is_admin)])
+async def get_dispatch_proposal_endpoint(incident_id: str):
+    """Gemma-Agent API: Evaluates the incident and available database resources to generate a detailed dispatch suggestion."""
+    redis = await get_redis()
+    
+    # Try fetching from Redis cache first
+    cached = await redis.get(f"proposal:{incident_id}")
+    if cached:
+        return json.loads(cached)
+        
+    # Search in Redis active incidents list
+    raw_inc = await redis.get(f"incident:{incident_id}")
+    if not raw_inc:
+        raw_list = await redis.lrange("active_incidents", 0, 99)
+        for r in raw_list:
+            inc = json.loads(r)
+            if str(inc.get("id")) == str(incident_id):
+                raw_inc = r
+                break
+                
+    if not raw_inc:
+        # Check standard voice_sos prefix fallback
+        raise HTTPException(status_code=404, detail="Incident not found in active operational queue.")
+        
+    incident = json.loads(raw_inc)
+    proposal = await generate_dispatch_proposal(incident)
+    
+    # Cache proposal for 1 hour to prevent redundant LLM invocations
+    await redis.set(f"proposal:{incident_id}", json.dumps(proposal), ex=3600)
+    return proposal
+
+
+@app.post("/api/admin/dispatch/approve/{incident_id}", dependencies=[Depends(is_admin)])
+async def approve_tactical_dispatch(incident_id: str, payload: dict = Body(...)):
+    """HITL Endpoint: Deducts allocated resources in PostGIS database, logs dispatch, and broadcasts live dispatch order."""
+    units_to_dispatch = payload.get("units", [])
+    tactical_rationale = payload.get("justification", "Dispatch approved by Admin Commander.")
+    
+    redis = await get_redis()
+    db = SessionLocal()
+    try:
+        dispatched_units = []
+        for unit in units_to_dispatch:
+            db_unit = None
+            if isinstance(unit, int) or (isinstance(unit, str) and unit.isdigit()):
+                db_unit = db.query(ResourceUnit).filter(ResourceUnit.id == int(unit)).first()
+            else:
+                db_unit = db.query(ResourceUnit).filter(ResourceUnit.unit_name == str(unit)).first()
+                
+            if db_unit and db_unit.status == ResourceStatus.AVAILABLE:
+                # DEDUCT RESOURCE: Update status to DISPATCHED in PostgreSQL
+                db_unit.status = ResourceStatus.DISPATCHED
+                dispatched_units.append(db_unit.unit_name)
+                
+                # Log to dispatch log
+                log = DispatchLog(
+                    event_id=1,
+                    unit_id=db_unit.id,
+                    ai_reasoning=tactical_rationale,
+                    eta_minutes=float(payload.get("eta_minutes", 8.0))
+                )
+                db.add(log)
+                
+        db.commit()
+        
+        # Update incident status to DISPATCHED in Redis cache
+        raw_inc = await redis.get(f"incident:{incident_id}")
+        if raw_inc:
+            incident = json.loads(raw_inc)
+            incident["status"] = "DISPATCHED"
+            incident["dispatched_units"] = dispatched_units
+            await redis.set(f"incident:{incident_id}", json.dumps(incident))
+            
+            # Atomically update the active incidents Redis list
+            active_raw = await redis.lrange("active_incidents", 0, 99)
+            await redis.delete("active_incidents")
+            for item in active_raw:
+                inc = json.loads(item)
+                if str(inc.get("id")) == str(incident_id):
+                    inc["status"] = "DISPATCHED"
+                    inc["dispatched_units"] = dispatched_units
+                await redis.rpush("active_incidents", json.dumps(inc))
+        
+        # Broadcast updated dispatch details to all active Responders
+        responder_msg = {
+            "type": "new_dispatch",
+            "incident_id": incident_id,
+            "triage_level": payload.get("triage_level", "HIGH"),
+            "message": f"CRPF Triage Dispatch Approved: {', '.join(dispatched_units)}. Mission: {tactical_rationale}",
+            "route_coordinates": payload.get("route_coordinates", []),
+            "eta_minutes": payload.get("eta_minutes", 8)
+        }
+        await redis.publish("broadcast:responder", json.dumps(responder_msg))
+        
+        # Notify the Admin dashboard to trigger status update transitions
+        await redis.publish("broadcast:admin", json.dumps({
+            "type": "dispatch_confirmed",
+            "incident_id": incident_id,
+            "dispatched_units": dispatched_units
+        }))
+        
+        return {
+            "status": "success",
+            "message": f"Successfully dispatched: {', '.join(dispatched_units)}",
+            "dispatched_units": dispatched_units
+        }
+    except Exception as e:
+        db.rollback()
+        logger.error(f"⚠️ Dispatch approval error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        db.close()
+
+
+@app.post("/api/admin/dispatch/reject/{incident_id}", dependencies=[Depends(is_admin)])
+async def reject_tactical_dispatch(incident_id: str, reason: str = Body(..., embed=True)):
+    """HITL Endpoint: Rejects and dismisses incident report."""
+    redis = await get_redis()
+    raw_inc = await redis.get(f"incident:{incident_id}")
+    if raw_inc:
+        incident = json.loads(raw_inc)
+        incident["status"] = "REJECTED"
+        await redis.set(f"incident:{incident_id}", json.dumps(incident))
+        
+        # Atomically update the active incidents Redis list
+        active_raw = await redis.lrange("active_incidents", 0, 99)
+        await redis.delete("active_incidents")
+        for item in active_raw:
+            inc = json.loads(item)
+            if str(inc.get("id")) == str(incident_id):
+                inc["status"] = "REJECTED"
+            await redis.rpush("active_incidents", json.dumps(inc))
+            
+    # Notify Admin channels
+    await redis.publish("broadcast:admin", json.dumps({
+        "type": "dispatch_rejected",
+        "incident_id": incident_id
+    }))
+    
+    return {"status": "rejected", "incident_id": incident_id}
 
 # ── WebSocket Management ──────────────────────────────────────────────
 @app.websocket("/ws/{role}")
@@ -695,8 +1003,17 @@ async def get_admin_incidents():
 # ══════════════════════════════════════════════════════════════════════
 @app.get("/api/admin/summary")
 async def get_admin_summary():
+    redis = await get_redis()
+
+    # ── Credit-saver: return cached summary if it exists (60s TTL) ──
     try:
-        redis = await get_redis()
+        cached = await redis.get("admin_summary_cache")
+        if cached:
+            return json.loads(cached)
+    except Exception:
+        pass
+
+    try:
         raw_incidents = await redis.lrange("active_incidents", 0, 49)
         incidents = [json.loads(i) for i in raw_incidents]
     except Exception:
@@ -784,12 +1101,20 @@ No generic advice. Every point must reference real data or Pune-specific context
     except Exception:
         summary = {"commander_briefing": "Intelligence report generating. Stand by."}
 
-    return {
+    result = {
         "summary": summary,
         "incident_count": len(incidents),
         "generated_at": datetime.utcnow().isoformat(),
         "model": "gemma-4-31b-it",
     }
+
+    # ── Cache the result for 60 seconds to prevent redundant LLM calls ──
+    try:
+        await redis.set("admin_summary_cache", json.dumps(result), ex=60)
+    except Exception:
+        pass
+
+    return result
 
 
 # ══════════════════════════════════════════════════════════════════════
@@ -800,7 +1125,7 @@ async def admin_ai_chat(body: dict = Body(...)):
     question = body.get("question", "")
     try:
         redis = await get_redis()
-        raw = await redis.lrange("active_incidents", 0, 19)
+        raw = await redis.lrange("active_incidents", 0, 4)
         incidents = [json.loads(i) for i in raw]
     except Exception:
         incidents = []
@@ -816,7 +1141,7 @@ If asked about diverting a resource, calculate the tradeoff explicitly.
 If no incidents exist yet, answer based on general disaster response doctrine.
 Max 150 words. Be decisive and direct."""
 
-    response = await call_gemma_smart(prompt)
+    response = await call_gemma_fast(prompt)
     return {"answer": response, "model": "gemma-4-31b-it",
             "timestamp": datetime.utcnow().isoformat()}
 

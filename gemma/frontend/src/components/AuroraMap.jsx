@@ -33,7 +33,7 @@ const UNIT_ICONS = {
   police: "P",
   ndrf: "N"
 };
-export default function AuroraMap({ data, height = 500 }) {
+export default function AuroraMap({ data = {}, height = 500 }) {
   const mapRef = useRef(null);
   const leafletMap = useRef(null);
   const layersRef = useRef([]);
