@@ -43,14 +43,15 @@ export default function DemoSimulator({ onSimulationComplete }) {
           status: "connected",
           reading: data.reading,
           sensors: data.sensors,
-          has_gps: data.has_gps
+          has_gps: data.has_gps,
+          devices: data.devices
         });
         if (data.has_gps && data.sensors?.location?.lat) {
           setLat(data.sensors.location.lat);
           setLon(data.sensors.location.lon);
         }
       } else {
-        setSensorStatus({ status: "unreachable", error: data.error });
+        setSensorStatus({ status: "unreachable", error: data.error, devices: data.devices });
       }
     } catch (err) {
       setSensorStatus({ status: "error", error: String(err) });
@@ -94,8 +95,11 @@ export default function DemoSimulator({ onSimulationComplete }) {
       clearInterval(stepInterval);
       setActiveStep(10);
       setResult(data);
-      const source = data.layers?.["2_sensors"]?.source || "unknown";
+      const source = data.layers?.["2_sensors"]?.source || data.sensor_source || "unknown";
       addLog(`Data source: ${source.toUpperCase()}`, source === "phyphox" ? "info" : "warning");
+      if (data.sensor_source?.startsWith("phyphox")) {
+        addLog(`Phyphox readings: ${data.sensor_reading_count || 0} from ${data.sensor_device_count || 0} device(s)`, data.sensor_reading_count ? "info" : "warning");
+      }
       if (data.layers?.["1_trigger"]?.phone_location) {
         const loc = data.layers["1_trigger"].phone_location;
         addLog(`Phone GPS: (${loc.lat?.toFixed(5)}, ${loc.lon?.toFixed(5)})`, "info");
@@ -223,13 +227,13 @@ export default function DemoSimulator({ onSimulationComplete }) {
   }
           <div style={{ marginBottom: 16, display: "flex", gap: 8, alignItems: "center" }}>
             <span
-    className={`card-badge ${result.layers?.["2_sensors"]?.source === "phyphox" ? "badge-critical" : "badge-medium"}`}
+    className={`card-badge ${(result.layers?.["2_sensors"]?.source || result.sensor_source) === "phyphox" ? "badge-critical" : "badge-medium"}`}
     style={{ padding: "6px 14px", fontSize: "0.8rem" }}
   >
-              {result.layers?.["2_sensors"]?.source === "phyphox" ? "Live Phyphox Data" : "Synthetic Data"}
+              {(result.layers?.["2_sensors"]?.source || result.sensor_source) === "phyphox" ? "Live Phyphox Data" : "Synthetic Data"}
             </span>
             <span className="text-muted" style={{ fontSize: "0.8rem" }}>
-              {result.layers?.["2_sensors"]?.reading_count} readings from {result.layers?.["2_sensors"]?.device_count} device(s)
+              {result.layers?.["2_sensors"]?.reading_count ?? result.sensor_reading_count ?? 0} readings from {result.layers?.["2_sensors"]?.device_count ?? result.sensor_device_count ?? 0} device(s)
             </span>
           </div>
 

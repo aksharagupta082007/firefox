@@ -1,8 +1,40 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { api } from '../api';
 
 export default function SensorsBlocks({ useRealSensor, sensorStatus, testSensor }) {
+  const [showDeviceForm, setShowDeviceForm] = useState(false);
+  const [deviceAddress, setDeviceAddress] = useState("");
+  const [deviceName, setDeviceName] = useState("");
+  const [registering, setRegistering] = useState(false);
+  const [registerError, setRegisterError] = useState("");
+
   if (!useRealSensor) return null;
+
+  const addDevice = async () => {
+    const address = deviceAddress.trim();
+    if (!address) {
+      setRegisterError("Enter the Phyphox phone IP address or remote URL.");
+      return;
+    }
+
+    setRegistering(true);
+    setRegisterError("");
+    try {
+      const result = await api.registerDevice(address, deviceName.trim() || void 0);
+      if (result.status === "error" || result.error) {
+        setRegisterError(result.error || "Could not register Phyphox device.");
+        return;
+      }
+      setShowDeviceForm(false);
+      setDeviceAddress("");
+      setDeviceName("");
+      await testSensor();
+    } catch (err) {
+      setRegisterError(String(err));
+    } finally {
+      setRegistering(false);
+    }
+  };
 
   return (
     <div className="card" style={{ marginBottom: 16, padding: 16 }}>
@@ -20,19 +52,43 @@ export default function SensorsBlocks({ useRealSensor, sensorStatus, testSensor 
           <button
             className="btn btn-outline"
             style={{ padding: "6px 14px", fontSize: "0.75rem" }}
-            onClick={async () => {
-              const ip = prompt("Enter Phyphox phone IP address (e.g., 192.168.31.100):");
-              if (ip) {
-                const name = prompt("Device name (optional):", `Phone-${ip.split(".").pop()}`);
-                await api.registerDevice(ip, name || void 0);
-                testSensor();
-              }
-            }}
+            onClick={() => setShowDeviceForm((open) => !open)}
           >
             Add Device
           </button>
         </div>
       </div>
+
+      {showDeviceForm && (
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 8, marginBottom: 12 }}>
+          <input
+            aria-label="Phyphox phone IP address or URL"
+            placeholder="192.168.31.100:8080"
+            value={deviceAddress}
+            onChange={(e) => setDeviceAddress(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") addDevice();
+            }}
+          />
+          <input
+            aria-label="Phyphox device name"
+            placeholder="Phone name"
+            value={deviceName}
+            onChange={(e) => setDeviceName(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") addDevice();
+            }}
+          />
+          <button className="btn btn-danger" style={{ padding: "8px 14px", fontSize: "0.75rem" }} onClick={addDevice} disabled={registering}>
+            {registering ? "Adding..." : "Register"}
+          </button>
+          {registerError && (
+            <div style={{ gridColumn: "1 / -1", color: "var(--severity-critical)", fontSize: "0.78rem" }}>
+              {registerError}
+            </div>
+          )}
+        </div>
+      )}
 
       {sensorStatus.status === "connected" && sensorStatus.sensors && (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 8, fontSize: "0.78rem" }}>
@@ -71,8 +127,13 @@ export default function SensorsBlocks({ useRealSensor, sensorStatus, testSensor 
 
       {sensorStatus.status === "unreachable" && (
         <div style={{ padding: 12, background: "rgba(232,80,2,0.08)", borderRadius: 8, fontSize: "0.8rem", color: "var(--severity-critical)" }}>
-          No devices reachable. Click "Add Device" to register a Phyphox phone by IP.
+          {sensorStatus.error || "No devices reachable. Click Add Device to register a Phyphox phone by IP."}
           <br /><span className="text-muted" style={{ fontSize: "0.75rem" }}>Make sure: (1) Phyphox is open on phone (2) Remote access is enabled (3) Both devices are on same WiFi</span>
+          {sensorStatus.devices?.length > 0 && (
+            <div className="mono" style={{ marginTop: 8, color: "var(--text-muted)" }}>
+              {sensorStatus.devices.map((d) => `${d.name}: ${d.status} (${d.ip}:${d.port})`).join(" | ")}
+            </div>
+          )}
         </div>
       )}
     </div>

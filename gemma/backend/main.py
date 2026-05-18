@@ -1212,8 +1212,12 @@ async def register_sensor_device(body: dict = Body(...)):
     name = body.get("name")
     if not ip:
         return {"error": "IP address required"}
-    device = _collector.register_device(ip, name)
-    return {"status": "registered", "device": device}
+    try:
+        port = int(body.get("port", 8080) or 8080)
+        device = _collector.register_device(ip, name, port=port)
+        return {"status": "registered", "device": device}
+    except ValueError as e:
+        return {"status": "error", "error": str(e)}
 
 
 # ══════════════════════════════════════════════════════════════════════
@@ -1230,7 +1234,11 @@ async def test_sensor_connection():
             readings = await _collector.poll_all_once(session)
         
         if not readings:
-            return {"status": "unreachable", "error": "No data received from devices"}
+            return {
+                "status": "unreachable",
+                "error": "No data received from devices",
+                "devices": _collector.get_devices(),
+            }
         
         reading = readings[0]
         has_gps = bool(reading.get("lat") and reading.get("lon"))
@@ -1262,21 +1270,38 @@ async def list_sensor_devices():
 #  ENDPOINT 8: Simulate
 # ══════════════════════════════════════════════════════════════════════
 @app.post("/api/simulate")
-async def run_simulation(body: dict = Body(...)):
-    from backend.simulator.full_simulation import run_full_simulation
-    import asyncio
+async def run_simulation(body: dict | None = Body(default=None)):
+    from backend.simulator.earthquake_sim import run_full_simulation
     try:
-        # Run the simulation in the background so we don't block the frontend.
-        # The simulation will push to Redis and broadcast via WebSockets.
-        asyncio.create_task(run_full_simulation())
-        
-        return {
-            "simulation_complete": True,
-            "message": "Simulation started in background. Incidents will populate via WebSocket."
-        }
+        body = body or {}
+        use_real = body.get("use_real_sensor", False)
+
+        if use_real and _collector.device_count > 0:
+            readings = await _collector.burst_fetch(polls=30, interval=0.1)
+            location = _collector.get_last_location()
+            result = run_full_simulation(
+                magnitude=body.get("magnitude", 5.5),
+                lat=location["lat"] if location else body.get("epicenter_lat", 18.5204),
+                lon=location["lon"] if location else body.get("epicenter_lon", 73.8567),
+                depth_km=body.get("depth_km", 10),
+                live_readings=readings,
+            )
+            result["sensor_source"] = "phyphox" if readings else "phyphox_unreachable"
+            result["sensor_device_count"] = _collector.device_count
+            result["sensor_reading_count"] = len(readings)
+            result["sensor_devices"] = _collector.get_devices()
+        else:
+            result = run_full_simulation(
+                magnitude=body.get("magnitude", 5.5),
+                lat=body.get("epicenter_lat", 18.5204),
+                lon=body.get("epicenter_lon", 73.8567),
+                depth_km=body.get("depth_km", 10),
+            )
+            result["sensor_source"] = "synthetic"
+            result["sensor_device_count"] = _collector.device_count
+            result["sensor_reading_count"] = len(result.get("sensor_readings", []))
+        return result
     except Exception as e:
-        import traceback
-        traceback.print_exc()
         return {"error": str(e), "simulation_complete": False}
 
 

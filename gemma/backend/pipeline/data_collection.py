@@ -20,6 +20,7 @@ import asyncio
 import logging
 import time
 from typing import Optional, Dict, Any, List
+from urllib.parse import urlsplit
 import aiohttp
 
 logger = logging.getLogger(__name__)
@@ -35,9 +36,28 @@ PHYPHOX_QUERY = (
 POLL_INTERVAL_S = 0.1  # 100ms
 
 
+def normalize_device_address(address: str, port: int = 8080) -> Dict[str, Any]:
+    """Accept an IP, IP:port, or full Phyphox URL and normalize it."""
+    raw = (address or "").strip()
+    if not raw:
+        raise ValueError("Phyphox device IP or URL is required")
+
+    parsed = urlsplit(raw if "://" in raw else f"//{raw}")
+    host = parsed.hostname
+    if not host:
+        raise ValueError("Invalid Phyphox device address")
+
+    resolved_port = parsed.port or port
+    return {
+        "ip": host,
+        "port": resolved_port,
+        "url": f"http://{host}:{resolved_port}/get?{PHYPHOX_QUERY}",
+    }
+
+
 def build_endpoint_url(ip: str, port: int = 8080) -> str:
-    """Build Phyphox polling URL from device IP."""
-    return f"http://{ip}:{port}/get?{PHYPHOX_QUERY}"
+    """Build Phyphox polling URL from a device address."""
+    return normalize_device_address(ip, port)["url"]
 
 
 class PhyphoxCollector:
@@ -77,7 +97,10 @@ class PhyphoxCollector:
         Register a new Phyphox device by IP address.
         Returns device info dict.
         """
-        url = build_endpoint_url(ip, port)
+        endpoint = normalize_device_address(ip, port)
+        ip = endpoint["ip"]
+        port = endpoint["port"]
+        url = endpoint["url"]
         device_info = {
             "ip": ip,
             "port": port,
@@ -182,7 +205,7 @@ class PhyphoxCollector:
         """Fetch from a single Phyphox endpoint."""
         # Extract IP from URL for device_id
         try:
-            device_id = url.split("//")[1].split(":")[0]
+            device_id = urlsplit(url).hostname or "unknown"
         except Exception:
             device_id = "unknown"
 
@@ -197,12 +220,19 @@ class PhyphoxCollector:
                         self._devices[device_id]["status"] = "error"
                     return None
         except asyncio.TimeoutError:
+            logger.error(f"Timeout connecting to Phyphox device at {url}")
             if device_id in self._devices:
                 self._devices[device_id]["status"] = "timeout"
             return None
         except aiohttp.ClientError as e:
+            logger.error(f"ClientError connecting to Phyphox device at {url}: {e}")
             if device_id in self._devices:
                 self._devices[device_id]["status"] = "offline"
+            return None
+        except Exception as e:
+            logger.error(f"Unexpected error polling Phyphox device at {url}: {e}")
+            if device_id in self._devices:
+                self._devices[device_id]["status"] = "error"
             return None
 
     async def poll_all_once(self, session: aiohttp.ClientSession) -> List[Dict[str, Any]]:
