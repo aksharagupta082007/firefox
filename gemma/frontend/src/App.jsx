@@ -122,9 +122,9 @@ export default function App() {
 
         <section id="app-section" className="app-section">
           {page === "demo" && <DemoSimulator onSimulationComplete={(data) => { setLatestResult(data); setPage("admin"); }} />}
-          {page === "admin" && user?.role === 'admin' && <CommandCenter />}
-          {page === "responder" && user?.role === 'responder' && <ResponderDashboard pipelineResult={latestResult} />}
-          {page === "responder_sos" && user?.role === 'responder' && <ResponderSOS />}
+          {page === "admin" && (user ? <CommandCenter /> : <LoginPage onLogin={handleLogin} setPage={setPage} />)}
+          {page === "responder" && (user ? <ResponderDashboard pipelineResult={latestResult} /> : <LoginPage onLogin={handleLogin} setPage={setPage} />)}
+          {page === "responder_sos" && (user ? <ResponderSOS /> : <LoginPage onLogin={handleLogin} setPage={setPage} />)}
           {page === "citizen" && <CitizenApp />}
           {page === "login" && <LoginPage onLogin={handleLogin} setPage={setPage} />}
           {page === "signup" && <SignUpPage setPage={setPage} />}

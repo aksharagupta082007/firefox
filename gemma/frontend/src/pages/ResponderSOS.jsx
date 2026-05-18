@@ -135,7 +135,7 @@ export default function ResponderSOS() {
 
       if (response.status === 403 || response.status === 401) {
         setMessages(prev => [...prev, {
-          role: "ai", content: "🛑 ACCESS DENIED: Insufficient credentials. CRPF tactical system requires active Responder/Admin authentication."
+          role: "ai", content: "ACCESS DENIED: Insufficient credentials. CRPF tactical system requires active Responder/Admin authentication."
         }]);
         setSending(false);
         return;
@@ -206,7 +206,7 @@ export default function ResponderSOS() {
     } catch (err) {
       setNetworkError(true);
       setMessages(prev => [...prev, {
-        role: "ai", content: "🚨 Connection severed. Deploy secondary offline satellite systems or execute satellite SMS dispatch.",
+        role: "ai", content: "Connection severed. Deploy secondary offline satellite systems or execute satellite SMS dispatch.",
       }]);
       setStreamedText("");
       setSending(false);
@@ -246,35 +246,32 @@ export default function ResponderSOS() {
   };
 
   return (
-    <div className="citizen-app glass-card tactical-portal" style={{ maxWidth: 1100, margin: "0 auto", border: '1px solid rgba(234, 88, 12, 0.2)' }}>
-      <header className="citizen-header" style={{ borderBottom: '1px solid rgba(234, 88, 12, 0.2)', paddingBottom: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+    <div className="citizen-app glass-card tactical-portal" style={{ maxWidth: '100%', margin: "0 auto", border: '1px solid rgba(255, 255, 255, 0.06)' }}>
+      <header className="citizen-header" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
         <div>
-          <h2 className="gradient-text" style={{ background: 'linear-gradient(90deg, #ea580c, #f97316)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', margin: 0 }}>
+          <h2 className="gradient-text dashboard-title" style={{ margin: 0 }}>
             CRPF Tactical SOS Portal
           </h2>
-          <span style={{ fontSize: '12px', color: '#ea580c', fontFamily: 'JetBrains Mono', fontWeight: 'bold' }}>
-            📶 RES-COMM LINK // CLASSIFICATION: EN-ROUTE COORDINATOR
-          </span>
         </div>
         <div style={{ display: 'flex', gap: '8px' }}>
           <button 
             onClick={() => setRadioMuted(!radioMuted)}
             style={{
-              padding: '6px 12px', borderRadius: '6px', fontSize: '12px', cursor: 'pointer',
-              background: radioMuted ? '#4b5563' : 'rgba(234, 88, 12, 0.15)',
-              color: radioMuted ? '#9ca3af' : '#ea580c',
-              border: `1px solid ${radioMuted ? '#4b5563' : 'rgba(234, 88, 12, 0.4)'}`,
-              fontWeight: 'bold', fontFamily: 'JetBrains Mono'
+              padding: '6px 14px', borderRadius: '6px', fontSize: '12px', cursor: 'pointer',
+              background: radioMuted ? 'rgba(255,255,255,0.04)' : 'rgba(255,255,255,0.08)',
+              color: radioMuted ? '#646464' : '#f1f5f9',
+              border: '1px solid rgba(255,255,255,0.1)',
+              fontFamily: 'Inter, sans-serif'
             }}
           >
-            {radioMuted ? "🔇 RADIO MUTED" : "🔊 RADIO LIVE"}
+            {radioMuted ? 'Radio Muted' : 'Radio Live'}
           </button>
           <div style={{
-            background: 'rgba(255, 255, 255, 0.05)',
-            border: '1px solid rgba(255, 255, 255, 0.1)',
-            padding: '6px 12px', borderRadius: '6px', fontSize: '12px', fontFamily: 'JetBrains Mono', color: '#94a3b8'
+            background: 'rgba(255, 255, 255, 0.04)',
+            border: '1px solid rgba(255, 255, 255, 0.08)',
+            padding: '6px 14px', borderRadius: '6px', fontSize: '12px', fontFamily: 'Inter, sans-serif', color: '#a7a7a7'
           }}>
-            🔋 BATT: {batteryLevel}%
+            Battery: {batteryLevel}%
           </div>
         </div>
       </header>
@@ -282,14 +279,17 @@ export default function ResponderSOS() {
       {/* Low Battery Strobe Mode Alert */}
       {batteryLevel < 20 && (
         <div style={{ background: '#7f1d1d', color: '#fca5a5', padding: '10px 16px', borderRadius: '8px', marginBottom: '16px', fontSize: '13px', border: '1px solid #b91c1c' }}>
-          ⚡ CRPF SQUAD LOW BATTERY MODE — Minimizing transceiver energy output. Using compressed tactical parameters.
+          CRPF SQUAD LOW BATTERY MODE — Minimizing transceiver energy output. Using compressed tactical parameters.
         </div>
       )}
 
-      <div className="citizen-grid" style={{ gridTemplateColumns: '1.2fr 0.8fr', display: 'grid', gap: '20px', marginTop: '16px' }}>
+      {/* ══ Chat — Full Width ══ */}
+      <div style={{ background: 'rgba(0,0,0,0.15)', borderRadius: '14px', border: '1px solid rgba(255,255,255,0.05)', display: 'flex', flexDirection: 'column', marginBottom: '28px' }}>
         
-        {/* Left Panel: Chat and Communication */}
-        <div className="chat-section" style={{ background: 'rgba(10, 15, 29, 0.4)', borderRadius: '12px', border: '1px solid rgba(255, 255, 255, 0.03)', padding: '16px', display: 'flex', flexDirection: 'column', height: '620px' }}>
+        <div style={{ padding: '16px 20px', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+          <h3 style={{ margin: 0, fontSize: '13px', color: '#a7a7a7', fontFamily: 'Inter, sans-serif', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '1px' }}>CRPF Tactical Comms</h3>
+        </div>
+        <div className="chat-section" style={{ padding: '16px', display: 'flex', flexDirection: 'column', height: '480px' }}>
           <div className="chat-messages" style={{ flex: 1, overflowY: 'auto', paddingRight: '4px' }}>
             {messages.map((msg, i) => (
               <div key={i} className={`chat-bubble ${msg.role === "user" ? "user" : "ai"}`} style={{
@@ -301,14 +301,14 @@ export default function ResponderSOS() {
                 marginBottom: '14px',
                 fontSize: '13.5px',
                 lineHeight: '1.6',
-                fontFamily: msg.role === 'ai' ? 'inherit' : 'JetBrains Mono',
+                fontFamily: 'Inter, sans-serif',
                 whiteSpace: 'pre-wrap'
               }}>
                 {renderFormattedContent(msg.content)}
                 {msg.role === "ai" && msg.content.length > 20 && (
                   <button onClick={() => speakResponse(msg.content)}
-                    style={{ marginLeft: '12px', background: 'rgba(234, 88, 12, 0.1)', border: '1px solid rgba(234, 88, 12, 0.3)', borderRadius: '4px', padding: '3px 8px', cursor: 'pointer', fontSize: '11px', color: '#ff9b50', verticalAlign: 'middle', fontFamily: 'JetBrains Mono' }}
-                    title="Replay Radio Dispatch">🔊 BROADCAST</button>
+                    style={{ marginLeft: '12px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '4px', padding: '3px 8px', cursor: 'pointer', fontSize: '11px', color: '#a7a7a7', verticalAlign: 'middle', fontFamily: 'Inter, sans-serif' }}
+                    title="Replay Radio Dispatch">🔊 Broadcast</button>
                 )}
               </div>
             ))}
@@ -340,14 +340,14 @@ export default function ResponderSOS() {
             {/* Waiting indicator */}
             {sending && !streamedText && (
               <div className="chat-bubble ai" style={{ color: '#a78bfa', background: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.02)', padding: '12px 16px', borderRadius: '10px' }}>
-                <span style={{ animation: 'pulse 1.5s infinite', fontFamily: 'JetBrains Mono', color: '#ea580c', fontSize: '12px' }}>📡 CALCULATING CRPF TACTICAL BLUEPRINT & INGRESS MATRIX...</span>
+                <span style={{ animation: 'pulse 1.5s infinite', fontFamily: 'Inter, sans-serif', color: '#a7a7a7', fontSize: '12px' }}>📡 Calculating tactical blueprint...</span>
               </div>
             )}
 
             <div ref={chatEnd} />
           </div>
 
-          <div className="chat-input-bar" style={{ marginTop: '12px', borderTop: '1px solid rgba(255, 255, 255, 0.05)', paddingTop: '12px' }}>
+          <div className="chat-input-bar" style={{ marginTop: '12px', borderTop: '1px solid rgba(255, 255, 255, 0.05)', paddingTop: '12px', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'nowrap' }}>
             <button
               className={`voice-btn ${recording ? 'recording' : ''}`}
               onMouseDown={startRecording} onMouseUp={stopRecording}
@@ -357,71 +357,74 @@ export default function ResponderSOS() {
                 border: `1px solid ${recording ? '#dc2626' : 'rgba(234, 88, 12, 0.4)'}`,
                 color: recording ? 'white' : '#ea580c',
                 cursor: 'pointer',
-                width: '45px',
-                height: '45px',
+                flexShrink: 0,
+                width: '42px',
+                height: '42px',
                 borderRadius: '50%',
                 fontSize: '18px',
                 transition: 'all 0.2s',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                marginRight: '8px'
               }}
               title="Hold to report over radio"
             >
               🎤
             </button>
-            <input className="chat-input" placeholder="Enter sector reporting data or request tactical route..."
+            <input className="chat-input" placeholder="Report or request tactical route..."
               value={input} onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && sendMessage()}
-              style={{ background: 'rgba(255, 255, 255, 0.02)', border: '1px solid rgba(255, 255, 255, 0.08)', borderRadius: '8px', color: '#f1f5f9', padding: '12px 16px', outline: 'none', transition: 'border-color 0.2s' }}
+              style={{ flex: 1, minWidth: 0, background: 'rgba(255, 255, 255, 0.02)', border: '1px solid rgba(255, 255, 255, 0.08)', borderRadius: '8px', color: '#f1f5f9', padding: '11px 14px', outline: 'none', transition: 'border-color 0.2s', fontSize: '14px' }}
             />
             <button className="btn" onClick={() => sendMessage()} disabled={sending} style={{
-              background: 'linear-gradient(90deg, #ea580c, #f97316)',
-              color: 'white',
-              padding: '12px 20px',
-              border: 'none',
+              flexShrink: 0,
+              background: 'rgba(255,255,255,0.08)',
+              color: '#f1f5f9',
+              padding: '11px 18px',
+              border: '1px solid rgba(255,255,255,0.1)',
               borderRadius: '8px',
               fontSize: '13px',
-              fontWeight: 'bold',
-              letterSpacing: '1px',
-              fontFamily: 'JetBrains Mono',
-              cursor: 'pointer'
+              fontWeight: '600',
+              fontFamily: 'Inter, sans-serif',
+              cursor: 'pointer',
+              whiteSpace: 'nowrap',
             }}>
-              {sending ? "..." : "SEND TACTICAL"}
+              {sending ? '...' : 'Send'}
             </button>
           </div>
 
           {/* Offline Fallback */}
           {networkError && (
-            <div style={{ background: 'rgba(127, 29, 29, 0.3)', border: '1px solid rgba(185, 28, 28, 0.4)', borderRadius: '10px', padding: '12px', marginTop: '12px' }}>
-              <p style={{ color: '#fca5a5', fontSize: '12px', marginBottom: '8px', fontFamily: 'JetBrains Mono' }}>
-                ⚠️ NETWORK OUTAGE: PRIMARY LINK SEVERED. ACCESS SATELLITE DISPATCH.
+            <div style={{ background: 'rgba(127, 29, 29, 0.2)', border: '1px solid rgba(185, 28, 28, 0.3)', borderRadius: '10px', padding: '12px', marginTop: '12px' }}>
+              <p style={{ color: '#fca5a5', fontSize: '12px', marginBottom: '8px', fontFamily: 'Inter, sans-serif' }}>
+                Network outage — primary link severed. Access satellite dispatch.
               </p>
               <button onClick={sendEmergencySMS} style={{
-                width: '100%', padding: '12px', background: '#ea580c', color: 'white',
-                border: 'none', borderRadius: '8px', fontSize: '13px', fontWeight: 'bold', cursor: 'pointer', fontFamily: 'JetBrains Mono'
+                width: '100%', padding: '12px', background: 'rgba(255,255,255,0.07)', color: '#f1f5f9',
+                border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', fontSize: '13px', fontWeight: '600', cursor: 'pointer', fontFamily: 'Inter, sans-serif'
               }}>
-                📱 GENERATE CRPF SATELLITE SMS (WORKS OFFLINE)
+                Generate Satellite SMS (Offline)
               </button>
             </div>
           )}
         </div>
+      </div>
 
-        {/* Right Panel: Operations Briefing and Resources Sidebar */}
-        <aside className="citizen-info" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+      {/* ══ 2-Column Widgets ══ */}
+      <div className="dash-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           
           {/* Threat Zone Status Widget */}
           <div className="info-box" style={{ background: 'rgba(10, 15, 29, 0.5)', border: '1px solid rgba(255,255,255,0.03)', borderRadius: '12px', padding: '16px' }}>
-            <h3 style={{ fontSize: '13px', color: '#ea580c', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '12px', fontFamily: 'JetBrains Mono' }}>
-              🎯 Current Sector Risk Status
+            <h3 style={{ fontSize: '13px', color: '#a7a7a7', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '12px', fontFamily: 'Inter, sans-serif', fontWeight: 600 }}>
+               Current Sector Risk Status
             </h3>
             <div style={{
               background: lastTriageLevel ? getTriageColor(lastTriageLevel) : '#1f2937',
               borderRadius: '8px', padding: '16px', textAlign: 'center', transition: 'background 0.5s',
               boxShadow: lastTriageLevel ? `0 0 20px ${getTriageColor(lastTriageLevel)}44` : 'none'
             }}>
-              <span style={{ color: 'white', fontWeight: '900', fontSize: '20px', letterSpacing: '2px', fontFamily: 'JetBrains Mono' }}>
+              <span style={{ color: 'white', fontWeight: '700', fontSize: '20px', letterSpacing: '1px', fontFamily: 'Inter, sans-serif' }}>
                 {lastTriageLevel ? `${lastTriageLevel} ZONE` : 'SECTOR PENDING'}
               </span>
             </div>
@@ -432,8 +435,8 @@ export default function ResponderSOS() {
 
           {/* CRPF Resource Pool Dashboard */}
           <div className="info-box" style={{ background: 'rgba(10, 15, 29, 0.5)', border: '1px solid rgba(255,255,255,0.03)', borderRadius: '12px', padding: '16px' }}>
-            <h3 style={{ fontSize: '13px', color: '#ea580c', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '12px', fontFamily: 'JetBrains Mono' }}>
-              🚒 Operational Resources Pool
+            <h3 style={{ fontSize: '13px', color: '#a7a7a7', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '12px', fontFamily: 'Inter, sans-serif', fontWeight: 600 }}>
+               Operational Resources Pool
             </h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
               
@@ -447,7 +450,7 @@ export default function ResponderSOS() {
                 const pct = (item.deployed / item.total) * 100;
                 return (
                   <div key={res.key} style={{ background: 'rgba(255, 255, 255, 0.02)', padding: '10px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.04)' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', marginBottom: '6px', fontFamily: 'JetBrains Mono' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', marginBottom: '6px', fontFamily: 'Inter, sans-serif' }}>
                       <span style={{ color: '#cbd5e1' }}>{res.label}</span>
                       <span style={{ color: res.color, fontWeight: 'bold' }}>{item.total - item.deployed} / {item.total} Free</span>
                     </div>
@@ -464,8 +467,8 @@ export default function ResponderSOS() {
 
           {/* Tactical Visual Rendezvous Strobe */}
           <div className="info-box" style={{ background: 'rgba(10, 15, 29, 0.5)', border: '1px solid rgba(255,255,255,0.03)', borderRadius: '12px', padding: '16px' }}>
-            <h3 style={{ fontSize: '13px', color: '#ea580c', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '12px', fontFamily: 'JetBrains Mono' }}>
-              🚨 Rendezvous Tactical Strobe
+            <h3 style={{ fontSize: '13px', color: '#a7a7a7', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '12px', fontFamily: 'Inter, sans-serif', fontWeight: 600 }}>
+               Rendezvous Tactical Strobe
             </h3>
             <button 
               onClick={() => setStrobeActive(!strobeActive)}
@@ -480,7 +483,7 @@ export default function ResponderSOS() {
                 boxShadow: strobeActive ? '0 0 15px #ea580c88' : 'none'
               }}
             >
-              {strobeActive ? '🔴 STROBE ACTIVE — TAP TO TERMINATE' : '📡 ACTIVATE HIGH-FREQUENCY rendezvous STROBE'}
+              {strobeActive ? '  STROBE ACTIVE — TAP TO TERMINATE' : 'ACTIVATE HIGH-FREQUENCY rendezvous STROBE'}
             </button>
             <p style={{ color: '#94a3b8', fontSize: '12px', marginTop: '6px', lineHeight: '1.4', textAlign: 'center' }}>
               Emits high-intensity strobe pulses to facilitate airborne visual targeting by CRPF rescue helicopters and night vision teams.
@@ -489,8 +492,8 @@ export default function ResponderSOS() {
 
           {/* Pune Sector III Ingress Checklist */}
           <div className="info-box" style={{ background: 'rgba(10, 15, 29, 0.5)', border: '1px solid rgba(255,255,255,0.03)', borderRadius: '12px', padding: '16px' }}>
-            <h3 style={{ fontSize: '13px', color: '#ea580c', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '8px', fontFamily: 'JetBrains Mono' }}>
-              🧭 Ingress Protocols Checklist
+            <h3 style={{ fontSize: '13px', color: '#a7a7a7', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '8px', fontFamily: 'Inter, sans-serif', fontWeight: 600 }}>
+               Ingress Protocols Checklist
             </h3>
             <ul style={{ color: '#cbd5e1', fontSize: '12.5px', paddingLeft: '20px', lineHeight: '1.8' }}>
               <li>Configure radio frequency to 142.85 MHz primary.</li>
@@ -500,8 +503,49 @@ export default function ResponderSOS() {
               <li>Carry mechanical jaws and secondary oxygen canisters.</li>
             </ul>
           </div>
-          
-        </aside>
+        </div>
+
+        {/* Right column: Strobe + Ingress */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+
+          {/* Tactical Visual Rendezvous Strobe */}
+          <div className="info-box" style={{ background: 'rgba(10, 15, 29, 0.5)', border: '1px solid rgba(255,255,255,0.03)', borderRadius: '12px', padding: '16px' }}>
+            <h3 style={{ fontSize: '13px', color: '#a7a7a7', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '12px', fontFamily: 'Inter, sans-serif', fontWeight: 600 }}>
+               Rendezvous Strobe
+            </h3>
+            <button 
+              onClick={() => setStrobeActive(!strobeActive)}
+              style={{
+                width: '100%', padding: '14px',
+                background: strobeActive ? strobeColor : 'rgba(255,255,255,0.06)',
+                border: '1px solid rgba(255,255,255,0.1)',
+                color: strobeActive ? 'white' : '#f1f5f9',
+                fontWeight: '600', fontSize: '13px', borderRadius: '8px', cursor: 'pointer',
+                fontFamily: 'Inter, sans-serif',
+                transition: 'background 0.2s',
+              }}
+            >
+              {strobeActive ? 'Strobe Active — Tap to Stop' : 'Activate Rendezvous Strobe'}
+            </button>
+            <p style={{ color: '#646464', fontSize: '12px', marginTop: '8px', lineHeight: '1.5', textAlign: 'center' }}>
+              Emits high-intensity strobe pulses for airborne targeting by CRPF helicopters.
+            </p>
+          </div>
+
+          {/* Pune Sector III Ingress Checklist */}
+          <div className="info-box" style={{ background: 'rgba(10, 15, 29, 0.5)', border: '1px solid rgba(255,255,255,0.03)', borderRadius: '12px', padding: '16px' }}>
+            <h3 style={{ fontSize: '13px', color: '#a7a7a7', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '12px', fontFamily: 'Inter, sans-serif', fontWeight: 600 }}>
+               Ingress Protocols Checklist
+            </h3>
+            <ul style={{ color: '#d1d5db', fontSize: '13px', paddingLeft: '20px', lineHeight: '2' }}>
+              <li>Configure radio frequency to 142.85 MHz primary.</li>
+              <li>Affix high-visibility CRPF safety markers onto entry points.</li>
+              <li>Establish structural shoring locks before debris clearing.</li>
+              <li>Designate casualty assembly post 100 meters upwind.</li>
+              <li>Carry mechanical jaws and secondary oxygen canisters.</li>
+            </ul>
+          </div>
+      </div>
       </div>
 
       {/* Blink cursor animation */}

@@ -63,5 +63,20 @@
     "username": "astra0109d@gmail.com",
     "password": "$2b$12$gD5/E6.h0vd11Ru/lB3A1.MLgOkdgqICL6iLanYoJzNLaML.SXHna",
     "role": "responder"
+  },
+  "deauth.attack@gmail.com": {
+    "username": "deauth.attack@gmail.com",
+    "password": "$2b$12$pcjnjp1EQq97/KOmEK3peOhGMJDnXdUZUQ4.XqXAKTLHR1RQNb3R.",
+    "role": "admin"
+  },
+  "admin@aurora.tech": {
+    "username": "admin@aurora.tech",
+    "password": "$2b$12$c0OkB8.chR1.nFpL0PPgcOyVc/MKEMqsdBIomNGYotErb34kXw5zq",
+    "role": "admin"
+  },
+  "admin@dev.tech": {
+    "username": "admin@dev.tech",
+    "password": "$2b$12$N8vA1oWa9YwNq4zeeUqH2.prq2Ka2t8Ow2Q8HBTUXcHOUVPiM6Nb6",
+    "role": "admin"
   }
 }
