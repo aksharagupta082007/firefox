@@ -34,7 +34,6 @@
     "password": "$2b$12$1Qh3KTxY1DKpCoFYT/TbCO6FSCY0ifYzPWZhochqUn4ORnNCkrD9i",
     "role": "citizen"
   },
-<<<<<<< HEAD
   "citizen@gmail.com": {
     "username": "citizen@gmail.com",
     "password": "$2b$12$HR0dLkl6j/fX6YD18bgBN./PCB5zpcii5Fd0yYhMS14lUDXFUSCey",
@@ -53,7 +52,8 @@
   "responder1@gmail.com": {
     "username": "responder1@gmail.com",
     "password": "$2b$12$QG/3SnsOpIxO1abcz0YphOmZwKMUVS6/3McEw13IvjUBp0qosNMDq",
-=======
+    "role": "responder"
+  },
   "devarshibdesale15@gmail.com": {
     "username": "devarshibdesale15@gmail.com",
     "password": "$2b$12$Wmsi9Q4OOAYaGIIZe/NhkOfgM9MnuIJnjaqNSrowoZ7tANceFulTK",
@@ -62,7 +62,6 @@
   "astra0109d@gmail.com": {
     "username": "astra0109d@gmail.com",
     "password": "$2b$12$gD5/E6.h0vd11Ru/lB3A1.MLgOkdgqICL6iLanYoJzNLaML.SXHna",
->>>>>>> origin/master
     "role": "responder"
   }
 }
