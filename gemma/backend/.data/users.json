@@ -48,5 +48,10 @@
     "username": "nam@mindscreen.com",
     "password": "$2b$12$NZB7pT/0izoubdbH1zXqxuchfeOGYhKPhOD344U3MBuatgVJYa5R.",
     "role": "admin"
+  },
+  "responder1@gmail.com": {
+    "username": "responder1@gmail.com",
+    "password": "$2b$12$QG/3SnsOpIxO1abcz0YphOmZwKMUVS6/3McEw13IvjUBp0qosNMDq",
+    "role": "responder"
   }
 }

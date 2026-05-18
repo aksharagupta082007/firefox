@@ -49,7 +49,13 @@ async def run_full_simulation() -> dict:
             await redis_service.connect()
             if redis_service.client:
                 await redis_service.client.lpush("active_incidents", json.dumps(incident))
-        except Exception:
+                # Broadcast to UI for live updates
+                await redis_service.client.publish("broadcast:admin", json.dumps({
+                    "type": "new_incident",
+                    "incident": incident
+                }))
+        except Exception as e:
+            print(f"Redis error: {e}")
             pass
 
         await asyncio.sleep(0.3)

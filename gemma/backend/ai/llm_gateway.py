@@ -11,6 +11,9 @@ import logging
 
 logger = logging.getLogger("aurora.ai.gateway")
 
+from dotenv import load_dotenv
+load_dotenv()
+
 # Primary: Hugging Face
 hf_token = os.getenv("HUGGINGFACE_API_KEY")
 hf_client = AsyncInferenceClient(token=hf_token)
@@ -33,7 +36,7 @@ async def call_gemma_fast(prompt: str) -> str:
             model=GEMMA_FAST,
             messages=messages,
             temperature=0.7,
-            max_tokens=300,
+            max_tokens=1500,
         )
         return response.choices[0].message.content
     except Exception as e:
@@ -45,7 +48,7 @@ async def call_gemma_fast(prompt: str) -> str:
             model=LOCAL_MODEL,
             messages=messages,
             temperature=0.7,
-            max_tokens=300,
+            max_tokens=1500,
         )
         return response.choices[0].message.content
     except Exception as e:
@@ -66,7 +69,7 @@ async def call_gemma_smart(prompt: str, system: str = None) -> str:
             model=GEMMA_SMART,
             messages=messages,
             temperature=0.2,
-            max_tokens=1024,
+            max_tokens=3000,
         )
         return response.choices[0].message.content
     except Exception as e:
@@ -78,7 +81,7 @@ async def call_gemma_smart(prompt: str, system: str = None) -> str:
             model=LOCAL_MODEL,
             messages=messages,
             temperature=0.2,
-            max_tokens=1024,
+            max_tokens=3000,
         )
         return response.choices[0].message.content
     except Exception as e:

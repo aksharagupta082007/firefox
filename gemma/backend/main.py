@@ -1261,30 +1261,20 @@ async def list_sensor_devices():
 # ══════════════════════════════════════════════════════════════════════
 @app.post("/api/simulate")
 async def run_simulation(body: dict = Body(...)):
-    from backend.simulator.earthquake_sim import run_full_simulation
+    from backend.simulator.full_simulation import run_full_simulation
+    import asyncio
     try:
-        use_real = body.get("use_real_sensor", False)
+        # Run the simulation in the background so we don't block the frontend.
+        # The simulation will push to Redis and broadcast via WebSockets.
+        asyncio.create_task(run_full_simulation())
         
-        # If live mode and we have registered devices, do a burst fetch
-        if use_real and _collector.device_count > 0:
-            readings = await _collector.burst_fetch(polls=30, interval=0.1)
-            location = _collector.get_last_location()
-            result = run_full_simulation(
-                magnitude=body.get("magnitude", 5.5),
-                lat=location["lat"] if location else body.get("epicenter_lat", 18.5204),
-                lon=location["lon"] if location else body.get("epicenter_lon", 73.8567),
-                depth_km=body.get("depth_km", 10),
-                live_readings=readings,
-            )
-        else:
-            result = run_full_simulation(
-                magnitude=body.get("magnitude", 5.5),
-                lat=body.get("epicenter_lat", 18.5204),
-                lon=body.get("epicenter_lon", 73.8567),
-                depth_km=body.get("depth_km", 10),
-            )
-        return result
+        return {
+            "simulation_complete": True,
+            "message": "Simulation started in background. Incidents will populate via WebSocket."
+        }
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         return {"error": str(e), "simulation_complete": False}
 
 
