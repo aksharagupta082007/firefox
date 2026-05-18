@@ -45,10 +45,31 @@ class RedisClient:
 
     async def update_list_atomic(self, key: str, item: Dict[str, Any], max_length: int = 100):
         """
-        Concurrency-safe list update using Redis LPUSH and LTRIM.
+        Concurrency-safe list update using Redis pipeline.
+        Deduplicates items based on 'id' if present, then LPUSH and LTRIM.
         Used for SOS queues and event logs.
         """
         await self.connect()
+        item_id = item.get("id")
+        
+        if item_id:
+            try:
+                raw_list = await self.client.lrange(key, 0, -1)
+                pipe = self.client.pipeline(transaction=True)
+                for raw_item in raw_list:
+                    try:
+                        parsed = json.loads(raw_item)
+                        if parsed.get("id") == item_id:
+                            pipe.lrem(key, 0, raw_item)
+                    except Exception:
+                        pass
+                pipe.lpush(key, json.dumps(item))
+                pipe.ltrim(key, 0, max_length - 1)
+                await pipe.execute()
+                return
+            except Exception as e:
+                logger.error(f"Error in deduplicating list update: {e}")
+
         async with self.client.pipeline(transaction=True) as pipe:
             pipe.lpush(key, json.dumps(item))
             pipe.ltrim(key, 0, max_length - 1)

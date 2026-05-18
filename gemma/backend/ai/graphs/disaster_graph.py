@@ -2,7 +2,8 @@
 AURORA TECH — Disaster Orchestration Graph
 Uses LangGraph to coordinate agents and manage state.
 """
-from typing import TypedDict, List, Dict, Any
+from typing import TypedDict, List, Dict, Any, Annotated
+import operator
 from langgraph.graph import StateGraph, END
 from langgraph.checkpoint.memory import MemorySaver
 from backend.ai.agents.triage_agent import run_triage
@@ -19,7 +20,7 @@ class GraphState(TypedDict):
     triage_results: Dict[str, Any]
     tactical_recommendations: Dict[str, Any]
     oversight_summary: Dict[str, Any]
-    history: List[str]
+    history: Annotated[List[str], operator.add]
     next_step: str
 
 async def triage_node(state: GraphState):
@@ -28,7 +29,6 @@ async def triage_node(state: GraphState):
     intelligence = await run_triage(report.raw_message)
     
     return {
-        **state,
         "triage_results": intelligence,
         "next_step": "tactical"
     }
@@ -41,9 +41,8 @@ async def tactical_node(state: GraphState):
     recommendations = await run_tactical(incidents)
     
     return {
-        **state,
         "tactical_recommendations": recommendations,
-        "next_step": "oversight"
+        "next_step": "update_state"
     }
 
 async def oversight_node(state: GraphState):
@@ -59,7 +58,6 @@ async def oversight_node(state: GraphState):
     await redis_service.set_state("global_summary", summary)
     
     return {
-        **state,
         "oversight_summary": summary,
         "next_step": "end"
     }
@@ -69,20 +67,35 @@ async def update_state_node(state: GraphState):
     intelligence = state["triage_results"]
     report = state["sos_report"]
     
-    # Update Redis atomically
-    await redis_service.update_list_atomic("active_incidents", report.model_dump())
+    # Construct a complete incident dict compatible with the dashboard UI
+    incident = {
+        "id": report.id,
+        "message": report.raw_message,
+        "lat": report.lat,
+        "lon": report.lon,
+        "triage_level": intelligence.get("triage_level", "HIGH"),
+        "ai_response": state.get("tactical_recommendations", {}).get("gemma_insight", "Help dispatched."),
+        "timestamp": report.timestamp.isoformat() if hasattr(report.timestamp, "isoformat") else str(report.timestamp),
+        "status": "ACTIVE",
+        "battery": 100,
+        "lang": "english",
+        "triage": intelligence,
+        "tactical": state.get("tactical_recommendations", {})
+    }
+    
+    # Update Redis atomically (deduplicating the pending record)
+    await redis_service.update_list_atomic("active_incidents", incident)
     await redis_service.set_state(f"triage:{report.id}", intelligence)
     
     # Broadcast event for real-time UI
     await redis_service.publish_event("broadcast:admin", {
         "type": "new_incident",
-        "incident_id": report.id,
-        "severity": intelligence.get("triage_level", "HIGH"),
-        "lat": report.lat,
-        "lon": report.lon
+        "incident": incident
     })
     
-    return {**state, "next_step": "end"}
+    return {
+        "next_step": "oversight"
+    }
 
 # Build the graph
 workflow = StateGraph(GraphState)
