@@ -18,5 +18,15 @@
     "username": "clinician@mindscreen.com",
     "password": "$2b$12$1Qh3KTxY1DKpCoFYT/TbCO6FSCY0ifYzPWZhochqUn4ORnNCkrD9i",
     "role": "citizen"
+  },
+  "tinkerbell08012007@gmail.com": {
+    "username": "tinkerbell08012007@gmail.com",
+    "password": "$2b$12$7GwvjJnbuU70N4co83srUuV25atUYeEtqTGIPnYwY/yoBSniQmoWa",
+    "role": "citizen"
+  },
+  "tinkerbell0801207@gmail.com": {
+    "username": "tinkerbell0801207@gmail.com",
+    "password": "$2b$12$1Abip.sbUceiIKIV6pmIyORHDWxkU/N2riiu9vQ4rJNa1OzUk7aJq",
+    "role": "responder"
   }
 }

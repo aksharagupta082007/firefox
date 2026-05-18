@@ -123,9 +123,10 @@ class EarthquakeSimulator:
     def get_resource_units(self): return PUNE_RESOURCE_UNITS
 
 
-def run_full_simulation(magnitude=5.2, lat=18.5204, lon=73.8567) -> Dict[str, Any]:
-    sim = EarthquakeSimulator(lat, lon, magnitude)
-    return {"trigger": sim.generate_trigger(), "sensor_readings": sim.generate_sensor_readings(),
+def run_full_simulation(magnitude=5.2, lat=18.5204, lon=73.8567, depth_km=10.0, live_readings=None) -> Dict[str, Any]:
+    sim = EarthquakeSimulator(lat, lon, magnitude, depth_km)
+    sensor_readings = live_readings if live_readings is not None else sim.generate_sensor_readings()
+    return {"trigger": sim.generate_trigger(), "sensor_readings": sensor_readings,
             "sos_reports": sim.generate_sos_reports(), "blocked_roads": sim.generate_blocked_roads(),
             "resource_units": sim.get_resource_units(),
             "params": {"magnitude": magnitude, "epicenter": {"lat": lat, "lon": lon},

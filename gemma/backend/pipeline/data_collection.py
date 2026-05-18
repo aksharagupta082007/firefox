@@ -197,12 +197,17 @@ class PhyphoxCollector:
                         self._devices[device_id]["status"] = "error"
                     return None
         except asyncio.TimeoutError:
+            logger.error(f"⏱️ Timeout connecting to Phyphox device at {url}")
             if device_id in self._devices:
                 self._devices[device_id]["status"] = "timeout"
             return None
         except aiohttp.ClientError as e:
+            logger.error(f"❌ ClientError connecting to Phyphox device at {url}: {e}")
             if device_id in self._devices:
                 self._devices[device_id]["status"] = "offline"
+            return None
+        except Exception as e:
+            logger.error(f"⚠️ Unexpected error polling Phyphox device at {url}: {e}")
             return None
 
     async def poll_all_once(self, session: aiohttp.ClientSession) -> List[Dict[str, Any]]:
