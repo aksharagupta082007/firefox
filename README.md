@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="https://img.shields.io/badge/AURORA_TECH-v1.0-FF2D2D?style=for-the-badge&labelColor=0A0A0A" alt="Aurora Tech"/>
+<img src="https://img.shields.io/badge/AURORA_TECH-v1.0-FF2D2D?style=for-the-badge&labelColor=0A0A0A" alt="FireFox"/>
 
 ```
  █████╗ ██╗   ██╗██████╗  ██████╗ ██████╗  █████╗     ████████╗███████╗ ██████╗██╗  ██╗
